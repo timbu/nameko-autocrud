@@ -12,6 +12,31 @@ Usage
 
 .. code-block:: python
 
+    from nameko_autocrud import AutoCrud
+    from nameko_sqlalchemy import DatabaseSession
+
+
+    class MemberAutoCrud(AutoCrud):
+        crud_model_cls = models.Member
+
+
+    class PaymentAutoCrud(AutoCrud):
+        crud_model_cls = models.Payment
+
+
+    class MyService(MemberAutoCrud, PaymentAutoCrud):
+    
+        name = 'my_service'
+        session = DatabaseSession(models.Base)
+        
+        @rpc
+        def my_entrypoint(self, value):
+            return value + 1
+
+OR...
+
+.. code-block:: python
+
     from nameko_autocrud import autocrud_factory
     from nameko_sqlalchemy import DatabaseSession
 
