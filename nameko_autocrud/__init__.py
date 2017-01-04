@@ -230,3 +230,63 @@ def _apply_defaults(config):
         'dependency': session_dependency.get('dependency')
     }
     return config
+
+
+class AutoCrudMetaclass(type):
+
+    def __init__(self, name, bases, clsdict):
+        cls = self
+
+        if len(cls.mro()) == 3:
+            # only works for direct subclasses
+
+            session_attr_name = cls.crud_session_attr_name
+
+            def make_manager_fn(manager_cls, fn_name):
+                def _fn(self, *args, **kwargs):
+                    manager = manager_cls(
+                        session=getattr(self, session_attr_name)
+                    )
+                    return getattr(manager, fn_name)(*args, **kwargs)
+                return _fn
+
+            model_cls = cls.crud_model_cls
+            manager_cls = (
+                cls.crud_manager_cls or db_manager_factory(model_cls)
+            )
+
+            entity_name = cls.crud_entity_name or model_cls.__name__.lower()
+            entity_name_plural = (
+                cls.crud_entity_name_plural or '{}s'.format(entity_name)
+            )
+
+            for crud_method in cls.crud_methods:
+                manager_fn_name = crud_method['manager_fn']
+
+                if manager_fn_name == 'list':
+                    auto_name = 'list_{}'.format(entity_name_plural)
+                else:
+                    auto_name = '{}_{}'.format(manager_fn_name, entity_name)
+                rpc_name = crud_method.get('name') or auto_name
+
+                manager_fn = make_manager_fn(manager_cls, manager_fn_name)
+                setattr(cls, rpc_name, manager_fn)
+                rpc(manager_fn)
+
+        super(AutoCrudMetaclass, cls).__init__(name, bases, clsdict)
+
+
+class AutoCrud(metaclass=AutoCrudMetaclass):
+
+    crud_session_attr_name = 'session'
+    crud_entity_name = None
+    crud_entity_name_plural = None
+    crud_model_cls = None
+    crud_manager_cls = None
+    crud_methods = [
+        {'manager_fn': 'get'},
+        {'manager_fn': 'list'},
+        {'manager_fn': 'update'},
+        {'manager_fn': 'create'},
+        {'manager_fn': 'delete'},
+    ]
