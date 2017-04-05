@@ -7,6 +7,9 @@ nameko-autocrud
 -  (Will) use sqlalchemy-filters.
 -  (probably) requires nameko-sqlalchemy.
 
+-  Should make the dependency act like a `storage` so it can be used in other methods to get/create model instances
+-  The dependency should extend DatabaseSession so it manages the session itself.
+
 Usage
 -----
 
