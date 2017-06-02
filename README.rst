@@ -33,12 +33,12 @@ This will automatically make the following additional RPC entrypoints available:
 .. code-block:: python
 
     get_member(self, id_)
-    list_members(self, filters=None)
+    list_members(self, filters=None, offset=None, limit=None)
     update_member(self, id_, data)
     create_member(self, data)
     delete_member(self, id_)
     get_payment(self, id_)
-    list_payments(self, filters=None)
+    list_payments(self, filters=None, offset=None, limit=None)
     update_payment(self, id_, data)
     create_payment(self, data)
     delete_payment(self, id_)
