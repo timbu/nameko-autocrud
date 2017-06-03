@@ -1,24 +1,95 @@
+import logging
 from datetime import date, datetime
 from enum import Enum
 
-from nameko.extensions import DependencyProvider
 from nameko.rpc import rpc
-from sqlalchemy.inspection import inspect
 from sqlalchemy_filters import apply_filters
 
+from nameko_sqlalchemy import DatabaseSession
 
-class DBManager:
+
+logger = logging.getLogger(__name__)
+
+
+class DBStorage(object):
+
+    def __init__(self, session=None, model_cls=None):
+        self.session = session
+        self.model_cls = model_cls
+
+    def _get(self, pk):
+        obj = self.query.get(pk)
+        if not obj:
+            # TODO custom exception here?
+            raise ValueError('Not found')
+        return obj
+
+    @property
+    def query(self):
+        return self.session.query(self.model_cls)
+
+    def get(self, pk):
+        return self._get(pk)
+
+    def list(self, filters=None, offset=None, limit=None):
+        query = self.query
+        if filters:
+            query = apply_filters(query, filters)
+        if offset:
+            query = query.offset(offset)
+        if limit:
+            query = query.limit(limit)
+
+        return query.all()
+
+    def count(self, filters=None):
+        query = self.query
+        if filters:
+            query = apply_filters(query, filters)
+
+        return query.count()
+
+    def update(self, pk, data, flush=True, commit=True):
+        obj = self._get(pk)
+        for key, value in data.items():
+            setattr(obj, key, value)
+        if commit:
+            self.session.commit()
+        elif flush:
+            self.session.flush()
+        return self.get(pk)
+
+    def create(self, data, flush=True, commit=True):
+        obj = self.model_cls(**data)
+        self.session.add(obj)
+        if commit:
+            self.session.commit()
+        elif flush:
+            self.session.flush()
+
+        return obj
+
+    def delete(self, pk, flush=True, commit=True):
+        obj = self._get(pk)
+        self.session.delete(obj)
+        if commit:
+            self.session.commit()
+        elif flush:
+            self.session.flush()
+
+
+class DBManager(object):
 
     model_cls = None
     entity_name = None
     entity_name_plural = None
     function_names = None
     event_names = None
-    session_attr_name = None
-    dispatcher_attr_name = None
+    db_storage_name = None
+    event_dispatcher_name = None
 
-    def __init__(self, session=None, dispatcher=None):
-        self.session = session
+    def __init__(self, db_storage=None, dispatcher=None):
+        self.db_storage = db_storage
         self.dispatcher = dispatcher
 
     def to_serializable(self, obj):
@@ -54,86 +125,67 @@ class DBManager:
         # conversion etc. themselves
         return dict_
 
-    def _get(self, pk):
-        obj = self.query.get(pk)
-        if not obj:
-            # TODO custom exception here?
-            raise ValueError('Not found')
-        return obj
-
     def _dispatch_event(self, event_name, object_data):
         if self.dispatcher:
             # TODO should we use `self.entity_name` or allow to customise?
             self.dispatcher(event_name, {self.entity_name: object_data})
+            logger.info('dispatched event: %s', event_name)
 
     @property
     def query(self):
         return self.session.query(self.model_cls)
 
     def get(self, pk):
-        obj = self._get(pk)
+        obj = self.db_storage.get(pk)
         return self.to_serializable(obj)
 
     def list(self, filters=None, offset=None, limit=None):
-        query = self.query
-        if filters:
-            query = apply_filters(query, filters)
-        if offset:
-            query = query.offset(offset)
-        if limit:
-            query = query.limit(limit)
-
+        results = self.db_storage.list(
+            filters=filters, offset=offset, limit=limit)
         return {
-            'results': [self.to_serializable(obj) for obj in query.all()]
+            'results': [self.to_serializable(result) for result in results]
         }
+
+    def count(self, filters=None):
+        return self.db_storage.count(filters=filters)
 
     def update(self, pk, data):
         data = self.from_serializable(data)
-        obj = self._get(pk)
-        for key, value in data.items():
-            setattr(obj, key, value)
-        self.session.commit()
-
-        updated_data = self.get(pk)
+        updated_obj = self.db_storage.update(pk, data)
+        updated_data = self.to_serializable(updated_obj)
         self._dispatch_event(self.event_names['update'], updated_data)
         return updated_data
 
     def create(self, data):
         data = self.from_serializable(data)
-        obj = self.model_cls(**data)
-        self.session.add(obj)
-        self.session.commit()
-        pk = inspect(obj).identity
-
-        created_data = self.get(pk)
+        created_obj = self.db_storage.create(data)
+        created_data = self.to_serializable(created_obj)
         self._dispatch_event(self.event_names['create'], created_data)
         return created_data
 
     def delete(self, pk):
-        obj = self._get(pk)
-        deleted_data = self.to_serializable(obj)
-
-        self.session.delete(obj)
-        self.session.commit()
-
+        deleted_data = self.get(pk)
+        self.db_storage.delete(pk)
         self._dispatch_event(self.event_names['delete'], deleted_data)
 
     @classmethod
     def from_service(cls, service):
-        """Instantiate this class, providing any necessary dependencies """
+        """
+        Instantiate, extracting the necessary dependencies from the service
+        """
         return cls(
-            session=getattr(service, cls.session_attr_name),
+            db_storage=getattr(service, cls.db_storage_name),
             dispatcher=(
-                getattr(service, cls.dispatcher_attr_name)
-                if cls.dispatcher_attr_name
+                getattr(service, cls.event_dispatcher_name)
+                if cls.event_dispatcher_name
                 else None
             ),
         )
 
     @classmethod
     def configure_subclass(
-        cls, model_cls, session_attr_name='session',
-        dispatcher_attr_name=None, entity_name=None,
+        cls, model_cls, db_storage_name,
+        event_dispatcher_name=None, entity_name=None,
         entity_name_plural=None, **kwargs
     ):
         """ Creates a pre-configured subclass of this manager """
@@ -148,6 +200,7 @@ class DBManager:
         function_names = {
             'get': 'get_{}'.format(entity_name),
             'list': 'list_{}'.format(entity_name_plural),
+            'count': 'count_{}'.format(entity_name_plural),
             'create': 'create_{}'.format(entity_name),
             'update': 'update_{}'.format(entity_name),
             'delete': 'delete_{}'.format(entity_name),
@@ -159,8 +212,8 @@ class DBManager:
         }
         cls_kwargs = {
             'model_cls': model_cls,
-            'session_attr_name': session_attr_name,
-            'dispatcher_attr_name': dispatcher_attr_name,
+            'db_storage_name': db_storage_name,
+            'event_dispatcher_name': event_dispatcher_name,
             'entity_name': entity_name,
             'entity_name_plural': entity_name_plural,
             'function_names': function_names,
@@ -179,14 +232,18 @@ class DBManager:
         return _Manager
 
 
-class AutoCrudProvider(DependencyProvider):
+class AutoCrudProvider(DatabaseSession):
 
-    DEFAULT_METHODS = ['get', 'list', 'update', 'create', 'delete']
+    DEFAULT_METHODS = ['get', 'list', 'count', 'update', 'create', 'delete']
+
+    """SQLAlchemy declarative base class to be used in the storage."""
 
     def __init__(
-        self, model_cls, methods=DEFAULT_METHODS, manager_cls=DBManager,
+        self, declarative_base_cls, model_cls, methods=DEFAULT_METHODS,
+        manager_cls=DBManager,
         **db_manager_kwargs
     ):
+        super().__init__(declarative_base_cls)
         self.model_cls = model_cls
         self.manager_cls = manager_cls
         self.methods = methods
@@ -200,8 +257,10 @@ class AutoCrudProvider(DependencyProvider):
         service_cls = container.service_cls
         model_cls = self.model_cls
 
+        # create a manager subclass pre-configured with required settings
         manager_cls = self.manager_cls.configure_subclass(
             model_cls,
+            attr_name,
             **self.db_manager_kwargs
         )
 
@@ -220,3 +279,6 @@ class AutoCrudProvider(DependencyProvider):
             rpc(manager_fn)
 
         return super().bind(container, attr_name)
+
+    def get_dependency(self, worker_ctx):
+        return DBStorage(super().get_dependency(worker_ctx), self.model_cls)
