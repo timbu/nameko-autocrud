@@ -88,7 +88,7 @@ class DBManager(object):
     db_storage_name = None
     event_dispatcher_name = None
 
-    def __init__(self, db_storage=None, dispatcher=None):
+    def __init__(self, db_storage, dispatcher=None):
         self.db_storage = db_storage
         self.dispatcher = dispatcher
 
@@ -232,18 +232,18 @@ class DBManager(object):
         return _Manager
 
 
-class AutoCrudProvider(DatabaseSession):
+class BaseAutoCrudProvider(object):
 
     DEFAULT_METHODS = ['get', 'list', 'count', 'update', 'create', 'delete']
 
     """SQLAlchemy declarative base class to be used in the storage."""
 
     def __init__(
-        self, declarative_base_cls, model_cls, methods=DEFAULT_METHODS,
+        self, model_cls, methods=DEFAULT_METHODS,
         manager_cls=DBManager,
         **db_manager_kwargs
     ):
-        super().__init__(declarative_base_cls)
+
         self.model_cls = model_cls
         self.manager_cls = manager_cls
         self.methods = methods
@@ -281,4 +281,23 @@ class AutoCrudProvider(DatabaseSession):
         return super().bind(container, attr_name)
 
     def get_dependency(self, worker_ctx):
-        return DBStorage(super().get_dependency(worker_ctx), self.model_cls)
+        session = self.get_session(worker_ctx)
+        return DBStorage(
+            session, self.model_cls
+        )
+
+    def get_session(self, worker_ctx):
+        raise NotImplementedError()
+
+
+class AutoCrudProvider(BaseAutoCrudProvider, DatabaseSession):
+    """SQLAlchemy declarative base class to be used in the storage."""
+
+    def __init__(
+        self, declarative_base_cls, *args, **kwargs
+    ):
+        DatabaseSession.__init__(self, declarative_base_cls)
+        BaseAutoCrudProvider.__init__(self, *args, **kwargs)
+
+    def get_session(self, worker_ctx):
+        return DatabaseSession.get_dependency(self, worker_ctx)
