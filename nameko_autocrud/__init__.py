@@ -5,7 +5,7 @@ from enum import Enum
 from nameko.rpc import rpc
 from sqlalchemy_filters import apply_filters
 
-from nameko_sqlalchemy import DatabaseSession
+from nameko.extensions import DependencyProvider
 
 
 logger = logging.getLogger(__name__)
@@ -79,14 +79,14 @@ class DBStorage(object):
 
 
 class DBManager(object):
-
     model_cls = None
+    methods = ['get', 'list', 'count', 'update', 'create', 'delete']
     entity_name = None
     entity_name_plural = None
     function_names = None
     event_names = None
-    db_storage_name = None
-    event_dispatcher_name = None
+    db_storage_attrname = None
+    event_dispatcher_attrname = None
 
     def __init__(self, db_storage, dispatcher=None):
         self.db_storage = db_storage
@@ -131,10 +131,6 @@ class DBManager(object):
             self.dispatcher(event_name, {self.entity_name: object_data})
             logger.info('dispatched event: %s', event_name)
 
-    @property
-    def query(self):
-        return self.session.query(self.model_cls)
-
     def get(self, pk):
         obj = self.db_storage.get(pk)
         return self.to_serializable(obj)
@@ -173,20 +169,22 @@ class DBManager(object):
         """
         Instantiate, extracting the necessary dependencies from the service
         """
+        db_storage = getattr(service, cls.db_storage_attrname)
+
         return cls(
-            db_storage=getattr(service, cls.db_storage_name),
+            db_storage=db_storage,
             dispatcher=(
-                getattr(service, cls.event_dispatcher_name)
-                if cls.event_dispatcher_name
+                getattr(service, cls.event_dispatcher_attrname)
+                if cls.event_dispatcher_attrname
                 else None
             ),
         )
 
     @classmethod
     def configure_subclass(
-        cls, model_cls, db_storage_name,
-        event_dispatcher_name=None, entity_name=None,
-        entity_name_plural=None, **kwargs
+        cls, db_storage_attrname=None,
+        event_dispatcher_attrname=None, entity_name=None,
+        entity_name_plural=None, model_cls=None, **kwargs
     ):
         """ Creates a pre-configured subclass of this manager """
         entity_name = entity_name or model_cls.__name__.lower()
@@ -210,94 +208,75 @@ class DBManager(object):
             'update': '{}_updated'.format(entity_name),
             'delete': '{}_deleted'.format(entity_name),
         }
-        cls_kwargs = {
+        cls_properties = {
             'model_cls': model_cls,
-            'db_storage_name': db_storage_name,
-            'event_dispatcher_name': event_dispatcher_name,
+            'db_storage_attrname': db_storage_attrname,
+            'event_dispatcher_attrname': event_dispatcher_attrname,
             'entity_name': entity_name,
             'entity_name_plural': entity_name_plural,
             'function_names': function_names,
             'event_names': event_names,
         }
         # allow overrides and additional kwargs
-        cls_kwargs.update(kwargs)
+        cls_properties.update(kwargs)
 
         class _Manager(cls):
             pass
 
         # set configuration as class properties
-        for key, value in cls_kwargs.items():
+        for key, value in cls_properties.items():
             setattr(_Manager, key, value)
 
         return _Manager
 
 
-class BaseAutoCrudProvider(object):
-
-    DEFAULT_METHODS = ['get', 'list', 'count', 'update', 'create', 'delete']
-
-    """SQLAlchemy declarative base class to be used in the storage."""
+class AutoCrudProvider(DependencyProvider):
 
     def __init__(
-        self, model_cls, methods=DEFAULT_METHODS,
-        manager_cls=DBManager,
-        **db_manager_kwargs
+        self, session_provider, manager_cls=DBManager, **db_manager_kwargs
     ):
-
-        self.model_cls = model_cls
+        self.session_providers = [session_provider]
         self.manager_cls = manager_cls
-        self.methods = methods
         self.db_manager_kwargs = db_manager_kwargs
 
     def bind(self, container, attr_name):
         """
         At bind time, modify the service class to add additional rpc methods.
         """
-
         service_cls = container.service_cls
-        model_cls = self.model_cls
+
+        bound = super().bind(container, attr_name)
 
         # create a manager subclass pre-configured with required settings
-        manager_cls = self.manager_cls.configure_subclass(
-            model_cls,
-            attr_name,
+        manager_subcls = self.manager_cls.configure_subclass(
+            db_storage_attrname=attr_name,
             **self.db_manager_kwargs
         )
+        bound.manager_subcls = manager_subcls
 
         def make_manager_fn(fn_name):
             def _fn(self, *args, **kwargs):
-                manager = manager_cls.from_service(self)
+                manager = manager_subcls.from_service(self)
                 return getattr(manager, fn_name)(*args, **kwargs)
             return _fn
 
-        for manager_fn_name in self.methods:
-
-            rpc_name = manager_cls.function_names[manager_fn_name]
-
+        for manager_fn_name in self.manager_cls.methods:
+            rpc_name = manager_subcls.function_names[manager_fn_name]
             manager_fn = make_manager_fn(manager_fn_name)
             setattr(service_cls, rpc_name, manager_fn)
             rpc(manager_fn)
 
-        return super().bind(container, attr_name)
+        return bound
 
     def get_dependency(self, worker_ctx):
-        session = self.get_session(worker_ctx)
-        return DBStorage(
-            session, self.model_cls
-        )
+        # returns DBStorage without session - this is supplied at worker_setup
+        return DBStorage(None, self.manager_subcls.model_cls)
 
-    def get_session(self, worker_ctx):
-        raise NotImplementedError()
+    def worker_setup(self, worker_ctx):
+        # add session to the storage
+        session_attr_name = self.session_providers[0].attr_name
+        service = worker_ctx.service
+        session = getattr(service, session_attr_name)
 
-
-class AutoCrudProvider(BaseAutoCrudProvider, DatabaseSession):
-    """SQLAlchemy declarative base class to be used in the storage."""
-
-    def __init__(
-        self, declarative_base_cls, *args, **kwargs
-    ):
-        DatabaseSession.__init__(self, declarative_base_cls)
-        BaseAutoCrudProvider.__init__(self, *args, **kwargs)
-
-    def get_session(self, worker_ctx):
-        return DatabaseSession.get_dependency(self, worker_ctx)
+        db_storage = getattr(service, self.attr_name)
+        db_storage.session = session

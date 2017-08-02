@@ -9,7 +9,7 @@ setup(
     url='http://github.com/timbu/nameko-autocrud',
     packages=['nameko_autocrud'],
     install_requires=[
-        "nameko>=2.0.0",
+        "nameko>=2.6.1",
         "sqlalchemy"
     ],
     extras_require={
