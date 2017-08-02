@@ -13,6 +13,7 @@ Usage
 -----
 
 .. code-block:: python
+
     from nameko_sqlalchemy import DatabaseSession
     from nameko_autocrud import AutoCrudProvider
 
@@ -20,6 +21,7 @@ Usage
 
         name = 'my_service'
         session = DatabaseSession(models.Base)
+        
         member_auto_crud = AutoCrudProvider(session, models.Member)
         payment_auto_crud = AutoCrudProvider(session, models.Payment)
 
