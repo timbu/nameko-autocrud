@@ -8,20 +8,20 @@ nameko-autocrud
 -  Requires nameko-sqlalchemy.
 
 -  Should make the dependency act like a `storage` so it can be used in other methods to get/create model instances
--  The dependency should extend DatabaseSession so it manages the session itself.
 
 Usage
 -----
 
 .. code-block:: python
-
+    from nameko_sqlalchemy import DatabaseSession
     from nameko_autocrud import AutoCrudProvider
 
     class MyService:
 
         name = 'my_service'
-        member_auto_crud = AutoCrudProvider(models.Base, models.Member)
-        payment_auto_crud = AutoCrudProvider(models.Base, models.Payment)
+        session = DatabaseSession(models.Base)
+        member_auto_crud = AutoCrudProvider(session, models.Member)
+        payment_auto_crud = AutoCrudProvider(session, models.Payment)
 
         @rpc
         def my_entrypoint(self, value):
