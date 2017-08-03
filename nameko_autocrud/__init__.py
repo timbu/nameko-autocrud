@@ -85,8 +85,6 @@ class DBManager(object):
     entity_name_plural = None
     function_names = None
     event_names = None
-    db_storage_attrname = None
-    event_dispatcher_attrname = None
 
     def __init__(self, db_storage, dispatcher=None):
         self.db_storage = db_storage
@@ -165,25 +163,8 @@ class DBManager(object):
         self._dispatch_event(self.event_names['delete'], deleted_data)
 
     @classmethod
-    def from_service(cls, service):
-        """
-        Instantiate, extracting the necessary dependencies from the service
-        """
-        db_storage = getattr(service, cls.db_storage_attrname)
-
-        return cls(
-            db_storage=db_storage,
-            dispatcher=(
-                getattr(service, cls.event_dispatcher_attrname)
-                if cls.event_dispatcher_attrname
-                else None
-            ),
-        )
-
-    @classmethod
     def configure_subclass(
-        cls, db_storage_attrname=None,
-        event_dispatcher_attrname=None, entity_name=None,
+        cls, entity_name=None,
         entity_name_plural=None, model_cls=None, **kwargs
     ):
         """ Creates a pre-configured subclass of this manager """
@@ -210,8 +191,6 @@ class DBManager(object):
         }
         cls_properties = {
             'model_cls': model_cls,
-            'db_storage_attrname': db_storage_attrname,
-            'event_dispatcher_attrname': event_dispatcher_attrname,
             'entity_name': entity_name,
             'entity_name_plural': entity_name_plural,
             'function_names': function_names,
@@ -233,9 +212,15 @@ class DBManager(object):
 class AutoCrudProvider(DependencyProvider):
 
     def __init__(
-        self, session_provider, manager_cls=DBManager, **db_manager_kwargs
+        self, session_provider, event_dispatcher_provider=None,
+        manager_cls=DBManager, **db_manager_kwargs
     ):
-        self.session_providers = [session_provider]
+        # store these providers as a map so they are not seen by nameko
+        # as sub-dependencies
+        self.dependency_providers = {
+            'session': session_provider,
+            'event_dispatcher': event_dispatcher_provider
+        }
         self.manager_cls = manager_cls
         self.db_manager_kwargs = db_manager_kwargs
 
@@ -249,18 +234,24 @@ class AutoCrudProvider(DependencyProvider):
 
         # create a manager subclass pre-configured with required settings
         manager_subcls = self.manager_cls.configure_subclass(
-            db_storage_attrname=attr_name,
             **self.db_manager_kwargs
         )
         bound.manager_subcls = manager_subcls
 
         def make_manager_fn(fn_name):
             def _fn(self, *args, **kwargs):
-                manager = manager_subcls.from_service(self)
+                """ This is the RPC method that will run on the service """
+                # build a manager using dependencies stored in the context
+                autocrud_context = self._autocrud_context[manager_subcls]
+                manager = manager_subcls(
+                    db_storage=autocrud_context['db_storage'],
+                    dispatcher=autocrud_context['event_dispatcher']
+                )
+                # delegate to the manager function with the same name.
                 return getattr(manager, fn_name)(*args, **kwargs)
             return _fn
 
-        for manager_fn_name in self.manager_cls.methods:
+        for manager_fn_name in manager_subcls.methods:
             rpc_name = manager_subcls.function_names[manager_fn_name]
             manager_fn = make_manager_fn(manager_fn_name)
             setattr(service_cls, rpc_name, manager_fn)
@@ -273,10 +264,24 @@ class AutoCrudProvider(DependencyProvider):
         return DBStorage(None, self.manager_subcls.model_cls)
 
     def worker_setup(self, worker_ctx):
-        # add session to the storage
-        session_attr_name = self.session_providers[0].attr_name
         service = worker_ctx.service
+        session_attr_name = self.dependency_providers['session'].attr_name
         session = getattr(service, session_attr_name)
 
+        # add required session to the storage
         db_storage = getattr(service, self.attr_name)
         db_storage.session = session
+
+        event_dispatcher = None
+        if self.dependency_providers['event_dispatcher']:
+            ed_attr_name = (
+                self.dependency_providers['event_dispatcher'].attr_name
+            )
+            event_dispatcher = getattr(service, ed_attr_name)
+
+        # store the storage and dispatcher instances on the service
+        service._autocrud_context = getattr(service, '_autocrud_context', {})
+        service._autocrud_context[self.manager_subcls] = {
+            'db_storage': db_storage,
+            'event_dispatcher': event_dispatcher,
+        }
