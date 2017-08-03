@@ -11,6 +11,44 @@ from nameko.extensions import DependencyProvider
 logger = logging.getLogger(__name__)
 
 
+def default_to_serializable(self, obj):
+    """ Convert a sqlalchemy model instance to a dict ready for serialization.
+    """
+    try:
+        dict_ = obj.to_dict()
+    except AttributeError:
+        dict_ = {
+            col.name: getattr(obj, col.name)
+            for col in obj.__table__.columns
+        }
+
+    def get_value(val):
+        if val is None:
+            return None
+        if isinstance(val, (str, int, float, bool)):
+            return val
+        # TODO- can't use Enum in py2
+        if isinstance(val, Enum):
+            return val.value
+        if isinstance(val, (date, datetime)):
+            return val.isoformat()
+        if isinstance(val, (list, set, tuple)):
+            return [get_value(v) for v in val]
+        if isinstance(val, dict):
+            return {k: get_value(v) for k, v in val.items()}
+        return str(val)
+
+    return get_value(dict_)
+
+
+def default_from_serializable(self, dict_):
+    """ Convert a field-values dict into sqlalchemy model field and values """
+    # default case, we let the sqlalchemy models handle string to
+    # date/decimal
+    # conversion etc. themselves
+    return dict_
+
+
 class DBStorage(object):
 
     def __init__(self, model_cls, session=None):
@@ -85,43 +123,12 @@ class DBManager(object):
     entity_name_plural = None
     function_names = None
     event_names = None
+    to_serializable = default_to_serializable
+    from_serializable = default_from_serializable
 
     def __init__(self, db_storage, dispatcher=None):
         self.db_storage = db_storage
         self.dispatcher = dispatcher
-
-    def to_serializable(self, obj):
-        try:
-            dict_ = obj.to_dict()
-        except AttributeError:
-            dict_ = {
-                col.name: getattr(obj, col.name)
-                for col in obj.__table__.columns
-            }
-
-        def get_value(val):
-            if val is None:
-                return None
-            if isinstance(val, (str, int, float, bool)):
-                return val
-            # TODO- can't use Enum in py2
-            if isinstance(val, Enum):
-                return val.value
-            if isinstance(val, (date, datetime)):
-                return val.isoformat()
-            if isinstance(val, (list, set, tuple)):
-                return [get_value(v) for v in val]
-            if isinstance(val, dict):
-                return {k: get_value(v) for k, v in val.items()}
-            return str(val)
-
-        return get_value(dict_)
-
-    def from_serializable(self, dict_):
-        # default case, we let the sqlalchemy models handle string to
-        # date/decimal
-        # conversion etc. themselves
-        return dict_
 
     def _dispatch_event(self, event_name, object_data):
         if self.dispatcher:
