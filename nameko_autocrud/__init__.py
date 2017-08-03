@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 class DBStorage(object):
 
-    def __init__(self, session=None, model_cls=None):
-        self.session = session
+    def __init__(self, model_cls, session=None):
         self.model_cls = model_cls
+        self.session = session
 
     def _get(self, pk):
         obj = self.query.get(pk)
@@ -167,7 +167,7 @@ class DBManager(object):
         cls, entity_name=None,
         entity_name_plural=None, model_cls=None, **kwargs
     ):
-        """ Creates a pre-configured subclass of this manager """
+        """ Creates a pre-configured subclass of this manager class """
         entity_name = entity_name or model_cls.__name__.lower()
         entity_name_plural = (
             entity_name_plural or '{}s'.format(entity_name)
@@ -213,7 +213,8 @@ class AutoCrudProvider(DependencyProvider):
 
     def __init__(
         self, session_provider, event_dispatcher_provider=None,
-        manager_cls=DBManager, **db_manager_kwargs
+        manager_cls=DBManager, db_storage_cls=DBStorage,
+        **db_manager_kwargs
     ):
         # store these providers as a map so they are not seen by nameko
         # as sub-dependencies
@@ -222,6 +223,7 @@ class AutoCrudProvider(DependencyProvider):
             'event_dispatcher': event_dispatcher_provider
         }
         self.manager_cls = manager_cls
+        self.db_storage_cls = db_storage_cls
         self.db_manager_kwargs = db_manager_kwargs
 
     def bind(self, container, attr_name):
@@ -260,8 +262,9 @@ class AutoCrudProvider(DependencyProvider):
         return bound
 
     def get_dependency(self, worker_ctx):
-        # returns DBStorage without session - this is supplied at worker_setup
-        return DBStorage(None, self.manager_subcls.model_cls)
+        # returns a storage instance without session
+        # session is bound to it at worker_setup
+        return self.db_storage_cls(self.manager_subcls.model_cls)
 
     def worker_setup(self, worker_ctx):
         service = worker_ctx.service
