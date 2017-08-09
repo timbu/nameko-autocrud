@@ -5,9 +5,9 @@ nameko-autocrud
 -  Based on Sqlalchemy models.
 -  Aim is to reduce the amount of code required to implement common methods.
 -  Uses sqlalchemy-filters.
--  Requires nameko-sqlalchemy.
-
--  Should make the dependency act like a `storage` so it can be used in other methods to get/create model instances
+-  Works in conjunction with sqlalchemy dependency providers such as nameko-sqlalchemy.
+-  Each dependency also can be used in other methods to get/manipulate model instances.
+-  Customisable components.
 
 Usage
 -----
