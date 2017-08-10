@@ -10,7 +10,8 @@ setup(
     packages=['nameko_autocrud'],
     install_requires=[
         "nameko>=2.6.1",
-        "sqlalchemy"
+        "sqlalchemy>=1.0.16",
+        "sqlalchemy_filters>=0.4.0",
     ],
     extras_require={
         'dev': [
@@ -18,6 +19,7 @@ setup(
             "flake8==2.5.4",
             "pylint==1.5.5",
             "pytest==2.9.1",
+            "nameko_sqlalchemy>=0.1.0",
         ]
     },
     zip_safe=True,

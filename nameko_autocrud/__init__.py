@@ -121,8 +121,8 @@ class DBManager(object):
     methods = ['get', 'list', 'count', 'update', 'create', 'delete']
     entity_name = None
     entity_name_plural = None
-    function_names = None
-    event_names = None
+    function_names = {}
+    event_names = {}
     to_serializable = default_to_serializable
     from_serializable = default_from_serializable
 
@@ -142,10 +142,9 @@ class DBManager(object):
 
     def list(self, filters=None, offset=None, limit=None):
         results = self.db_storage.list(
-            filters=filters, offset=offset, limit=limit)
-        return {
-            'results': [self.to_serializable(result) for result in results]
-        }
+            filters=filters, offset=offset, limit=limit
+        )
+        return [self.to_serializable(result) for result in results]
 
     def count(self, filters=None):
         return self.db_storage.count(filters=filters)
@@ -232,6 +231,7 @@ class AutoCrudProvider(DependencyProvider):
         self.manager_cls = manager_cls
         self.db_storage_cls = db_storage_cls
         self.db_manager_kwargs = db_manager_kwargs
+        self.manager_subcls = None  # set at bind time
 
     def bind(self, container, attr_name):
         """

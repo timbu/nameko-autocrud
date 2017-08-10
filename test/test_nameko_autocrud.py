@@ -75,12 +75,10 @@ def test_end_to_end(container):
     ) as list_examplemodels:
 
         result = list_examplemodels()
-        assert result == {
-            'results': [
-                {'id': 1, 'name': 'Bob Dobalina'},
-                {'id': 2, 'name': 'Phil Connors'}
-            ]
-        }
+        assert result == [
+            {'id': 1, 'name': 'Bob Dobalina'},
+            {'id': 2, 'name': 'Phil Connors'}
+        ]
 
     # update id 2
     with entrypoint_hook(
@@ -113,4 +111,4 @@ def test_end_to_end(container):
     ) as list_examplemodels:
 
         result = list_examplemodels()
-        assert result == {'results': [{'id': 2, 'name': 'Ned Ryerson'}]}
+        assert result == [{'id': 2, 'name': 'Ned Ryerson'}]
