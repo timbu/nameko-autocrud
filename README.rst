@@ -1,7 +1,7 @@
 nameko-autocrud
 =================
 
--  An experimental (slightly magical) dependency to automatically add CRUD RPC and (possibly HTTP) entrypoints to nameko microservices.
+-  An experimental (slightly magical) dependency to automatically add CRUD RPC (and possibly later HTTP) entrypoints to nameko microservices.
 -  Based on Sqlalchemy models.
 -  Aim is to reduce the amount of code required to implement common methods.
 -  Uses sqlalchemy-filters.
