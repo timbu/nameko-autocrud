@@ -17,7 +17,7 @@ class AutoCrudProvider(DependencyProvider):
         manager_cls=CrudManager, db_storage_cls=DBStorage,
         model_cls=None, entity_name=None, entity_name_plural=None,
         methods=None, method_names=None,
-        **db_manager_kwargs
+        **crud_manager_kwargs
     ):
         # store these providers as a map so they are not seen by nameko
         # as sub-dependencies
@@ -27,7 +27,7 @@ class AutoCrudProvider(DependencyProvider):
         self.model_cls = model_cls
         self.manager_cls = manager_cls
         self.db_storage_cls = db_storage_cls
-        self.db_manager_kwargs = db_manager_kwargs
+        self.crud_manager_kwargs = crud_manager_kwargs
 
         self.entity_name = entity_name or model_cls.__name__.lower()
         self.entity_name_plural = (
@@ -61,7 +61,7 @@ class AutoCrudProvider(DependencyProvider):
                     bound,  # the provider
                     self,  # the service instance
                     db_storage=getattr(self, attr_name),
-                    **bound.db_manager_kwargs
+                    **bound.crud_manager_kwargs
                 )
                 # delegate to the manager method with the same name.
                 return getattr(manager, fn_name)(*args, **kwargs)
