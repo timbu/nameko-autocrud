@@ -6,7 +6,7 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
-def default_to_serializable(self, obj):
+def default_to_serializable(obj):
     """ Convert a sqlalchemy model instance to a dict ready for serialization.
     """
     try:
@@ -36,7 +36,7 @@ def default_to_serializable(self, obj):
     return get_value(dict_)
 
 
-def default_from_serializable(self, dict_):
+def default_from_serializable(dict_):
     """ Convert a field-values dict into sqlalchemy model field and values """
     # default case, we let the sqlalchemy models handle string to
     # date/decimal
@@ -46,13 +46,14 @@ def default_from_serializable(self, dict_):
 
 class CrudManager(object):
 
-    to_serializable = default_to_serializable
-    from_serializable = default_from_serializable
-
     def __init__(
-        self, provider, service, db_storage=None, **kwargs
+        self, provider, service, db_storage=None,
+        to_serializable=default_to_serializable,
+        from_serializable=default_from_serializable, **kwargs
     ):
         self.db_storage = db_storage
+        self.to_serializable = to_serializable
+        self.from_serializable = from_serializable
 
     def get(self, pk):
         obj = self.db_storage.get(pk)
@@ -108,8 +109,10 @@ class CrudManagerWithEvents(CrudManager):
         logger.info('dispatched event: %s', event_name)
 
     def update(self, pk, data):
+        before = self.get(pk)
         updated_data = super().update(pk, data)
-        self._dispatch_event(self.event_names['update'], updated_data)
+        if updated_data != before:
+            self._dispatch_event(self.event_names['update'], updated_data)
         return updated_data
 
     def create(self, data):

@@ -1,16 +1,17 @@
 import logging
+from functools import partial
 
 from nameko.rpc import rpc
 
 from nameko.extensions import DependencyProvider
 
-from .managers import CrudManager
+from .managers import CrudManager, CrudManagerWithEvents
 from .storage import DBStorage
 
 logger = logging.getLogger(__name__)
 
 
-class AutoCrudProvider(DependencyProvider):
+class AutoCrud(DependencyProvider):
 
     def __init__(
         self, session_provider,
@@ -88,3 +89,6 @@ class AutoCrudProvider(DependencyProvider):
         # add required session to the storage
         db_storage = getattr(service, self.attr_name)
         db_storage.session = session
+
+
+AutoCrudWithEvents = partial(AutoCrud, manager_cls=CrudManagerWithEvents)
