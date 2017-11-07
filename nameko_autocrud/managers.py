@@ -90,13 +90,13 @@ class CrudManagerWithEvents(CrudManager):
 
     def __init__(
         self, provider, service,
-        dispatcher_name='event_dispatcher',
-        event_names=None, **kwargs
+        event_names=None, dispatcher_accessor=None, **kwargs
     ):
         super().__init__(provider, service, **kwargs)
 
         self.entity_name = provider.entity_name
-        self.dispatcher = getattr(service, dispatcher_name)
+        self.dispatcher = dispatcher_accessor(service)
+
         self.event_names = event_names or {
             'create': '{}_created'.format(provider.entity_name),
             'update': '{}_updated'.format(provider.entity_name),

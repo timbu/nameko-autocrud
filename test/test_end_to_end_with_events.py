@@ -5,8 +5,7 @@ from nameko.events import EventDispatcher
 from nameko.testing.services import entrypoint_hook
 from nameko_sqlalchemy import DatabaseSession
 
-from nameko_autocrud import AutoCrud, AutoCrudWithEvents
-# from nameko_autocrud.managers import CrudManagerWithEvents
+from nameko_autocrud import AutoCrudWithEvents
 
 
 @pytest.fixture
@@ -19,9 +18,9 @@ def service(create_service, dec_base, example_model):
         event_dispatcher = EventDispatcher()
 
         example_crud = AutoCrudWithEvents(
-            session,
+            'event_dispatcher',
+            'session',
             model_cls=example_model,
-            dispatcher_name='event_dispatcher'
         )
 
     return create_service(ExampleService, 'event_dispatcher')

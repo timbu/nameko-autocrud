@@ -1,14 +1,26 @@
 import logging
-from functools import partial
 
 from nameko.rpc import rpc
-
 from nameko.extensions import DependencyProvider
 
 from .managers import CrudManager, CrudManagerWithEvents
 from .storage import DBStorage
 
 logger = logging.getLogger(__name__)
+
+
+def get_dependency_accessor(accessor):
+
+    def get_dependency(service):
+        if isinstance(accessor, str):
+            return getattr(service, accessor)
+        if isinstance(accessor, DependencyProvider):
+            # only supported in nameko >= 2.7.0
+            return getattr(service, accessor.attr_name)
+        # assume a operator.getter style callable:
+        return accessor(service)
+
+    return get_dependency
 
 
 class AutoCrud(DependencyProvider):
@@ -22,9 +34,7 @@ class AutoCrud(DependencyProvider):
     ):
         # store these providers as a map so they are not seen by nameko
         # as sub-dependencies
-        self.dependency_providers = {
-            'session': session_provider,
-        }
+        self.session_accessor = get_dependency_accessor(session_provider)
         self.model_cls = model_cls
         self.manager_cls = manager_cls
         self.db_storage_cls = db_storage_cls
@@ -83,12 +93,23 @@ class AutoCrud(DependencyProvider):
 
     def worker_setup(self, worker_ctx):
         service = worker_ctx.service
-        session_attr_name = self.dependency_providers['session'].attr_name
-        session = getattr(service, session_attr_name)
+        session = self.session_accessor(service)
 
         # add required session to the storage
         db_storage = getattr(service, self.attr_name)
         db_storage.session = session
 
 
-AutoCrudWithEvents = partial(AutoCrud, manager_cls=CrudManagerWithEvents)
+class AutoCrudWithEvents(AutoCrud):
+
+    def __init__(
+        self, dispatcher_provider, *args, manager_cls=CrudManagerWithEvents,
+        **kwargs
+    ):
+        dispatcher_accessor = get_dependency_accessor(dispatcher_provider)
+        super().__init__(
+            *args,
+            manager_cls=manager_cls,
+            dispatcher_accessor=dispatcher_accessor,
+            **kwargs
+        )

@@ -12,7 +12,7 @@ def service(create_service, dec_base, example_model):
         name = "exampleservice"
 
         session = DatabaseSession(dec_base)
-        example_crud = AutoCrud(session, model_cls=example_model)
+        example_crud = AutoCrud('session', model_cls=example_model)
 
     return create_service(ExampleService)
 

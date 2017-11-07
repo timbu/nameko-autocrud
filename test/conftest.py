@@ -1,18 +1,9 @@
-# Nameko relies on eventlet
-# You should monkey patch the standard library as early as possible to avoid
-# importing anything before the patch is applied.
-# See http://eventlet.net/doc/patching.html#monkeypatching-the-standard-library
-# import eventlet
-# eventlet.monkey_patch()  # noqa (code before rest of imports)
-
-# from nameko.containers import ServiceContainer
 from collections import namedtuple
 
 import pytest
 from nameko_sqlalchemy import DB_URIS_KEY
 from nameko.testing.services import replace_dependencies
 from nameko.constants import AMQP_URI_CONFIG_KEY
-from nameko_sqlalchemy import DB_URIS_KEY, DatabaseSession
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
