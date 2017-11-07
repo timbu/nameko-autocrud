@@ -22,8 +22,8 @@ Usage
         name = 'my_service'
         session = DatabaseSession(models.Base)
         
-        member_auto_crud = AutoCrudProvider(session, models.Member)
-        payment_auto_crud = AutoCrudProvider(session, models.Payment)
+        member_auto_crud = AutoCrud(session, model_cls=models.Member)
+        payment_auto_crud = AutoCrud(session, model_cls=models.Payment)
 
         @rpc
         def my_entrypoint(self, value):
