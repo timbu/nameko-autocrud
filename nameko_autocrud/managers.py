@@ -1,4 +1,5 @@
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,19 @@ class CrudManager(object):
             filters=filters, offset=offset, limit=limit
         )
         return [self.to_serializable(result) for result in results]
+
+    def page(self, page_size, page_num, filters=None):
+        offset = page_size * (page_num - 1)
+        limit = page_size
+        total = self.count(filters=filters)
+        num_pages = math.ceil(total / page_size)
+        results = self.list(filters=filters, offset=offset, limit=limit)
+        return {
+            'results': results,
+            'num_pages': num_pages,
+            'num_results': total,
+            'page_num': page_num,
+        }
 
     def count(self, filters=None):
         return self.db_storage.count(filters=filters)

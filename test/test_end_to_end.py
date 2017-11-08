@@ -54,6 +54,35 @@ def test_end_to_end(service):
             record_2
         ]
 
+    # page through the service
+    with entrypoint_hook(
+        container, "page_examplemodels"
+    ) as page_examplemodels:
+
+        result = page_examplemodels(1, 1)
+        assert result == {
+            'results': [record_1],
+            'page_num': 1,
+            'num_pages': 2,
+            'num_results': 2,
+        }
+
+        result = page_examplemodels(1, 2)
+        assert result == {
+            'results': [record_2],
+            'page_num': 2,
+            'num_pages': 2,
+            'num_results': 2,
+        }
+
+        result = page_examplemodels(1, 3)
+        assert result == {
+            'results': [],
+            'page_num': 3,
+            'num_pages': 2,
+            'num_results': 2,
+        }
+
     # update id 2
     with entrypoint_hook(
         container, "update_examplemodel"

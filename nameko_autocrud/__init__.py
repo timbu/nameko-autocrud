@@ -47,11 +47,12 @@ class AutoCrud(DependencyProvider):
             entity_name_plural or '{}s'.format(self.entity_name)
         )
         self.methods = methods or [
-            'get', 'list', 'count', 'update', 'create', 'delete']
+            'get', 'list', 'page', 'count', 'update', 'create', 'delete']
 
         self.method_names = method_names or {
             'get': 'get_{}'.format(self.entity_name),
             'list': 'list_{}'.format(self.entity_name_plural),
+            'page': 'page_{}'.format(self.entity_name_plural),
             'count': 'count_{}'.format(self.entity_name_plural),
             'create': 'create_{}'.format(self.entity_name),
             'update': 'update_{}'.format(self.entity_name),
