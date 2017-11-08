@@ -69,7 +69,7 @@ class AutoCrud(DependencyProvider):
         """
         service_cls = container.service_cls
 
-        bound = super().bind(container, attr_name)
+        bound = super(AutoCrud, self).bind(container, attr_name)
 
         def make_manager_fn(fn_name):
             def _fn(self, *args, **kwargs):
@@ -112,12 +112,15 @@ class AutoCrud(DependencyProvider):
 class AutoCrudWithEvents(AutoCrud):
 
     def __init__(
-        self, dispatcher_provider, *args, manager_cls=CrudManagerWithEvents,
+        self,
+        session_provider,
+        dispatcher_provider,
+        manager_cls=CrudManagerWithEvents,
         **kwargs
     ):
         dispatcher_accessor = get_dependency_accessor(dispatcher_provider)
-        super().__init__(
-            *args,
+        super(AutoCrudWithEvents, self).__init__(
+            session_provider,
             manager_cls=manager_cls,
             dispatcher_accessor=dispatcher_accessor,
             **kwargs

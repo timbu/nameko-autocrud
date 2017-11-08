@@ -51,7 +51,8 @@ class CrudManagerWithEvents(CrudManager):
         self, provider, service,
         event_names=None, dispatcher_accessor=None, **kwargs
     ):
-        super().__init__(provider, service, **kwargs)
+        super(CrudManagerWithEvents, self).__init__(
+            provider, service, **kwargs)
 
         self.entity_name = provider.entity_name
         self.dispatcher = dispatcher_accessor(service)
@@ -63,23 +64,22 @@ class CrudManagerWithEvents(CrudManager):
         }
 
     def _dispatch_event(self, event_name, object_data):
-        # TODO should we use `self.entity_name` or allow to customise?
         self.dispatcher(event_name, {self.entity_name: object_data})
         logger.info('dispatched event: %s', event_name)
 
     def update(self, pk, data):
         before = self.get(pk)
-        updated_data = super().update(pk, data)
+        updated_data = super(CrudManagerWithEvents, self).update(pk, data)
         if updated_data != before:
             self._dispatch_event(self.event_names['update'], updated_data)
         return updated_data
 
     def create(self, data):
-        created_data = super().create(data)
+        created_data = super(CrudManagerWithEvents, self).create(data)
         self._dispatch_event(self.event_names['create'], created_data)
         return created_data
 
     def delete(self, pk):
-        deleted_data = super().delete(pk)
+        deleted_data = super(CrudManagerWithEvents, self).delete(pk)
         self._dispatch_event(self.event_names['delete'], deleted_data)
         return deleted_data

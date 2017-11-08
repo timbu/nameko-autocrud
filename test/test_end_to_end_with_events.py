@@ -18,8 +18,8 @@ def service(create_service, dec_base, example_model):
         event_dispatcher = EventDispatcher()
 
         example_crud = AutoCrudWithEvents(
-            'event_dispatcher',
             'session',
+            'event_dispatcher',
             model_cls=example_model,
         )
 
