@@ -63,6 +63,17 @@ def test_end_to_end_with_events(service):
     ]
     service.event_dispatcher.reset_mock()
 
+    # update id 2 with no change
+    with entrypoint_hook(
+        container, "update_examplemodel"
+    ) as update_examplemodel:
+
+        result = update_examplemodel(2, {'name': 'Ned Ryerson'})
+        assert result == updated_record_2
+
+    assert service.event_dispatcher.call_args_list == []
+    service.event_dispatcher.reset_mock()
+
     # delete
     with entrypoint_hook(
         container, "delete_examplemodel"

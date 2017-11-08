@@ -4,6 +4,7 @@ from nameko.rpc import rpc
 from nameko.extensions import DependencyProvider
 
 from .managers import CrudManager, CrudManagerWithEvents
+from .serializers import default_to_serializable, get_default_from_serializable
 from .storage import DBStorage
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class AutoCrud(DependencyProvider):
         manager_cls=CrudManager, db_storage_cls=DBStorage,
         model_cls=None, entity_name=None, entity_name_plural=None,
         methods=None, method_names=None,
+        from_serializable=None, to_serializable=None,
         **crud_manager_kwargs
     ):
         # store these providers as a map so they are not seen by nameko
@@ -56,6 +58,11 @@ class AutoCrud(DependencyProvider):
             'delete': 'delete_{}'.format(self.entity_name),
         }
 
+        self.from_serializable = (
+            from_serializable or get_default_from_serializable(model_cls))
+
+        self.to_serializable = (to_serializable or default_to_serializable)
+
     def bind(self, container, attr_name):
         """
         At bind time, modify the service class to add additional rpc methods.
@@ -72,6 +79,8 @@ class AutoCrud(DependencyProvider):
                     bound,  # the provider
                     self,  # the service instance
                     db_storage=getattr(self, attr_name),
+                    from_serializable=bound.from_serializable,
+                    to_serializable=bound.to_serializable,
                     **bound.crud_manager_kwargs
                 )
                 # delegate to the manager method with the same name.

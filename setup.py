@@ -12,14 +12,16 @@ setup(
         "nameko==2.6.0",
         "sqlalchemy>=1.0.16",
         "sqlalchemy_filters>=0.4.0",
+        "python-dateutil==2.6.1",
     ],
     extras_require={
         'dev': [
             "coverage==4.0.3",
             "flake8==2.5.4",
             "pylint==1.5.5",
-            "pytest==2.9.1",
+            "pytest==3.0.5",
             "nameko_sqlalchemy>=0.1.0",
+            "sqlalchemy-utils==0.32.5",
         ]
     },
     zip_safe=True,

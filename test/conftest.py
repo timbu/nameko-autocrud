@@ -6,6 +6,8 @@ from nameko.testing.services import replace_dependencies
 from nameko.constants import AMQP_URI_CONFIG_KEY
 from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy_utils import create_database, drop_database, database_exists
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture
@@ -23,12 +25,55 @@ def example_model(dec_base):
 
 
 @pytest.fixture
-def db_uri(tmpdir, example_model):
+def db_uri(tmpdir):
     db_uri = 'sqlite:///{}'.format(tmpdir.join("db").strpath)
-    engine = create_engine(db_uri)
-    example_model.metadata.create_all(engine)
-
     return db_uri
+
+
+# def engine(db_uri):
+#     engine = create_engine(db_uri)
+#     example_model.metadata.create_all(engine)
+#     return engine
+
+
+@pytest.fixture
+def connection(db_uri, dec_base):
+    create_db(db_uri)
+    engine = create_engine(db_uri)
+    dec_base.metadata.create_all(engine)
+    connection = engine.connect()
+    dec_base.metadata.bind = engine
+
+    yield connection
+
+    dec_base.metadata.drop_all()
+    destroy_database(db_uri)
+
+
+@pytest.fixture
+def session(connection, dec_base):
+    session_ = sessionmaker(bind=connection)
+    db_session = session_()
+
+    yield db_session
+
+    for table in reversed(dec_base.metadata.sorted_tables):
+        db_session.execute(table.delete())
+
+    db_session.commit()
+    db_session.close()
+
+
+def create_db(uri):
+    """Drop the database at ``uri`` and create a brand new one. """
+    destroy_database(uri)
+    create_database(uri)
+
+
+def destroy_database(uri):
+    """Destroy the database at ``uri``, if it exists. """
+    if database_exists(uri):
+        drop_database(uri)
 
 
 @pytest.fixture
@@ -42,7 +87,7 @@ def config(db_uri):
 
 
 @pytest.fixture
-def create_service(container_factory, config):
+def create_service(example_model, container_factory, config, session):
 
     def _create(service_cls, *dependencies, **dependency_map):
 
