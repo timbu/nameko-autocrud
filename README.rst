@@ -36,7 +36,7 @@ This will automatically make the following additional RPC entrypoints available:
 
     get_member(self, id_)
     list_members(self, filters=None, offset=None, limit=None)
-    page_membrers(self, page_size, page_num, filters=None)    
+    page_members(self, page_size, page_num, filters=None)    
     count_members(self, filters=None)
     update_member(self, id_, data)
     create_member(self, data)
