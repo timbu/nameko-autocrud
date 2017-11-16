@@ -47,11 +47,13 @@ class CrudManager(object):
         updated_data = self.to_serializable(updated_obj)
         return updated_data
 
-    def create(self, data):
+    def _create_object(self, data):
         data = self.from_serializable(data)
-        created_obj = self.db_storage.create(data)
-        created_data = self.to_serializable(created_obj)
-        return created_data
+        return self.db_storage.create(data)
+
+    def create(self, data):
+        created_obj = self._create_object(data)
+        return self.to_serializable(created_obj)
 
     def delete(self, pk):
         deleted_data = self.get(pk)
@@ -63,13 +65,17 @@ class CrudManagerWithEvents(CrudManager):
 
     def __init__(
         self, provider, service,
-        event_names=None, dispatcher_accessor=None, **kwargs
+        event_names=None, dispatcher_accessor=None,
+        to_event_serializable=None, **kwargs
     ):
         super(CrudManagerWithEvents, self).__init__(
             provider, service, **kwargs)
 
         self.entity_name = provider.entity_name
         self.dispatcher = dispatcher_accessor(service)
+        self.to_event_serializable = (
+            to_event_serializable or self.to_serializable
+        )
 
         self.event_names = event_names or {
             'create': '{}_created'.format(provider.entity_name),
@@ -77,23 +83,43 @@ class CrudManagerWithEvents(CrudManager):
             'delete': '{}_deleted'.format(provider.entity_name),
         }
 
-    def _dispatch_event(self, event_name, object_data):
-        self.dispatcher(event_name, {self.entity_name: object_data})
+    def _dispatch_event(self, event_name, object_data, payload=None):
+        payload = payload or {}
+        payload.update({self.entity_name: object_data})
+        self.dispatcher(event_name, payload)
         logger.info('dispatched event: %s', event_name)
 
     def update(self, pk, data):
-        before = self.get(pk)
+        before_obj = self.db_storage.get(pk)
+        before_data = self.to_event_serializable(before_obj)
+
         updated_data = super(CrudManagerWithEvents, self).update(pk, data)
-        if updated_data != before:
-            self._dispatch_event(self.event_names['update'], updated_data)
+
+        after_obj = self.db_storage.get(pk)
+        after_data = self.to_event_serializable(after_obj)
+
+        if before_data != after_data:
+            changed = [
+                field for field in sorted(set(before_data).union(after_data))
+                if before_data.get(field) != after_data.get(field)
+            ]
+            payload = {'changed': changed, 'before': before_data}
+            self._dispatch_event(
+                self.event_names['update'], after_data, payload=payload
+            )
+
         return updated_data
 
     def create(self, data):
-        created_data = super(CrudManagerWithEvents, self).create(data)
-        self._dispatch_event(self.event_names['create'], created_data)
-        return created_data
+        created_obj = super(CrudManagerWithEvents, self)._create_object(data)
+        event_data = self.to_event_serializable(created_obj)
+
+        self._dispatch_event(self.event_names['create'], event_data)
+        return self.to_serializable(created_obj)
 
     def delete(self, pk):
+        before_obj = self.db_storage.get(pk)
+        before_event = self.to_event_serializable(before_obj)
         deleted_data = super(CrudManagerWithEvents, self).delete(pk)
-        self._dispatch_event(self.event_names['delete'], deleted_data)
+        self._dispatch_event(self.event_names['delete'], before_event)
         return deleted_data
