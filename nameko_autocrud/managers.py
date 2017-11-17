@@ -19,18 +19,20 @@ class CrudManager(object):
         obj = self.db_storage.get(pk)
         return self.to_serializable(obj)
 
-    def list(self, filters=None, offset=None, limit=None):
+    def list(self, filters=None, order_by=None, offset=None, limit=None):
         results = self.db_storage.list(
-            filters=filters, offset=offset, limit=limit
+            filters=filters, order_by=order_by, offset=offset, limit=limit
         )
         return [self.to_serializable(result) for result in results]
 
-    def page(self, page_size, page_num, filters=None):
+    def page(self, page_size, page_num, filters=None, order_by=None):
         offset = page_size * (page_num - 1)
         limit = page_size
         total = self.count(filters=filters)
         num_pages = math.ceil(total / page_size)
-        results = self.list(filters=filters, offset=offset, limit=limit)
+        results = self.list(
+            filters=filters, order_by=order_by, offset=offset, limit=limit
+        )
         return {
             'results': results,
             'num_pages': num_pages,
@@ -113,7 +115,6 @@ class CrudManagerWithEvents(CrudManager):
     def create(self, data):
         created_obj = super(CrudManagerWithEvents, self)._create_object(data)
         event_data = self.to_event_serializable(created_obj)
-
         self._dispatch_event(self.event_names['create'], event_data)
         return self.to_serializable(created_obj)
 

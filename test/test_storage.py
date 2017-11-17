@@ -79,6 +79,18 @@ class TestStorageList:
         )
         assert results == [instances[1]]
 
+    def test_list_limit_and_order_by_desc(self, instances, storage):
+        results = storage.list(
+            limit=1, order_by=[{'field': 'id', 'direction': 'desc'}]
+        )
+        assert results == [instances[2]]
+
+    def test_list_limit_and_order_by_asc(self, instances, storage):
+        results = storage.list(
+            limit=1, order_by=[{'field': 'id', 'direction': 'asc'}]
+        )
+        assert results == [instances[0]]
+
 
 class TestStorageCount:
 
