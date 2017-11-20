@@ -59,5 +59,55 @@ The dependencies themselves can be used to manipulate sqlalchemy objects within 
         self.member_auto_crud.update(to_id, {'name': member.name})
 
 
+Customizing
+===========
+
+Customizing method names
+------------------------
+
+Specifying the ``entity_name`` will customize all generated method names. ``list``, ``page`` and ``count`` methods all use a plural form. If adding "s" is not correct, ``entity_name_plural`` can be specified.
+
+.. code-block:: python
+
+    product_status_crud = AutoCrud(
+        session, model_cls=models.ProductStatus, 
+        entity_name='product_status', 
+        entity_name_plural='product_statuses'
+    )
+
+To customize individual methods-names, you can use the ``*_method_name`` kwargs. Setting this value to `None` will prevent the method from being generated.
+
+.. code-block:: python
+
+    cake_crud = AutoCrud(
+        session, model_cls=models.Cake, 
+        delete_method_name='eat_cake', 
+        update_method_name=None,
+    )
+
+Customizing serialization
+-------------------------
+
+TODO - marshmallow examples
 
 
+Events
+======
+Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider. This has the same behaviour as ``AutoCrud`` but will dispatch nameko events for ``create``, ``update`` & ``delete`` actions.
+
+.. code-block:: python
+
+    from nameko.events import EventDispatcher
+    from nameko_sqlalchemy import DatabaseSession
+    from nameko_autocrud import AutoCrudProvider
+
+    class MyService:
+
+        name = 'my_service'
+        session = DatabaseSession(models.Base)
+        dispatcher = EventDispatcher()        
+        
+        payment_auto_crud = AutoCrudWithEvents(session, dispatcher, model_cls=models.Payment)
+
+TODO - event formats - customizing event names
+Specifying event serializer
