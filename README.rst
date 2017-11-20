@@ -15,7 +15,7 @@ Usage
 .. code-block:: python
 
     from nameko_sqlalchemy import DatabaseSession
-    from nameko_autocrud import AutoCrudProvider
+    from nameko_autocrud import AutoCrud
 
     class MyService:
 
@@ -99,7 +99,7 @@ Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider
 
     from nameko.events import EventDispatcher
     from nameko_sqlalchemy import DatabaseSession
-    from nameko_autocrud import AutoCrudProvider
+    from nameko_autocrud import AutoCrudWithEvents
 
     class MyService:
 
