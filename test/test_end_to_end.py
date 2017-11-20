@@ -1,4 +1,5 @@
 import pytest
+from nameko.rpc import rpc
 from nameko.testing.services import entrypoint_hook
 from nameko_sqlalchemy import DatabaseSession
 
@@ -13,6 +14,22 @@ def service(create_service, dec_base, example_model):
 
         session = DatabaseSession(dec_base)
         example_crud = AutoCrud('session', model_cls=example_model)
+
+    return create_service(ExampleService)
+
+
+@pytest.fixture
+def service2(create_service, dec_base, example_model):
+
+    class ExampleService(object):
+        name = "exampleservice"
+
+        session = DatabaseSession(dec_base)
+        example_crud = AutoCrud('session', model_cls=example_model)
+
+        @rpc
+        def get_examplemodel(self, id_):
+            return 'hello'
 
     return create_service(ExampleService)
 
@@ -115,3 +132,27 @@ def test_end_to_end(service):
 
         result = list_examplemodels()
         assert result == [updated_record_2]
+
+
+def test_wont_overwrite_service_methods(service2):
+    """ service2 already implements a get_examplemodel method.
+        Check it is not replaced with the autocrud version.
+    """
+    container = service2.container
+
+    record_1 = {'id': 1, 'name': 'Bob Dobalina'}
+
+    # write through the service
+    with entrypoint_hook(
+        container, "create_examplemodel"
+    ) as create_examplemodel:
+
+        result = create_examplemodel(record_1)
+        assert result == record_1
+
+    # call the get method
+    with entrypoint_hook(
+        container, "get_examplemodel"
+    ) as get_examplemodel:
+        result = get_examplemodel(1)
+        assert result == 'hello'

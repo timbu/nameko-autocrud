@@ -90,9 +90,10 @@ class AutoCrud(DependencyProvider):
 
         for manager_fn_name in self.methods:
             rpc_name = self.method_names[manager_fn_name]
-            manager_fn = make_manager_fn(manager_fn_name)
-            setattr(service_cls, rpc_name, manager_fn)
-            rpc(manager_fn)
+            if not getattr(service_cls, rpc_name, None):
+                manager_fn = make_manager_fn(manager_fn_name)
+                setattr(service_cls, rpc_name, manager_fn)
+                rpc(manager_fn)
 
         return bound
 
