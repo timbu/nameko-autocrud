@@ -9,6 +9,8 @@ from .storage import DBStorage
 
 logger = logging.getLogger(__name__)
 
+DEFAULT = object()
+
 
 def get_dependency_accessor(accessor):
 
@@ -30,8 +32,11 @@ class AutoCrud(DependencyProvider):
         self, session_provider,
         manager_cls=CrudManager, db_storage_cls=DBStorage,
         model_cls=None, entity_name=None, entity_name_plural=None,
-        methods=None, method_names=None,
         from_serializable=None, to_serializable=None,
+        get_method_name=DEFAULT, list_method_name=DEFAULT,
+        page_method_name=DEFAULT, count_method_name=DEFAULT,
+        create_method_name=DEFAULT, update_method_name=DEFAULT,
+        delete_method_name=DEFAULT,
         **crud_manager_kwargs
     ):
         # store these providers as a map so they are not seen by nameko
@@ -46,17 +51,25 @@ class AutoCrud(DependencyProvider):
         self.entity_name_plural = (
             entity_name_plural or '{}s'.format(self.entity_name)
         )
-        self.methods = methods or [
-            'get', 'list', 'page', 'count', 'update', 'create', 'delete']
 
-        self.method_names = method_names or {
-            'get': 'get_{}'.format(self.entity_name),
-            'list': 'list_{}'.format(self.entity_name_plural),
-            'page': 'page_{}'.format(self.entity_name_plural),
-            'count': 'count_{}'.format(self.entity_name_plural),
-            'create': 'create_{}'.format(self.entity_name),
-            'update': 'update_{}'.format(self.entity_name),
-            'delete': 'delete_{}'.format(self.entity_name),
+        def make_methodname(prefix, custom, plural=False):
+            return (
+                '{}{}'.format(
+                    prefix,
+                    self.entity_name_plural if plural else self.entity_name
+                )
+                if custom is DEFAULT
+                else custom
+            )
+
+        self.method_names = {
+            'get': make_methodname('get_', get_method_name),
+            'list': make_methodname('list_', list_method_name, plural=True),
+            'page': make_methodname('page_', page_method_name, plural=True),
+            'count': make_methodname('count_', count_method_name, plural=True),
+            'create': make_methodname('create_', create_method_name),
+            'update': make_methodname('update_', update_method_name),
+            'delete': make_methodname('delete_', delete_method_name),
         }
 
         self.from_serializable = (
@@ -88,9 +101,8 @@ class AutoCrud(DependencyProvider):
                 return getattr(manager, fn_name)(*args, **kwargs)
             return _fn
 
-        for manager_fn_name in self.methods:
-            rpc_name = self.method_names[manager_fn_name]
-            if not getattr(service_cls, rpc_name, None):
+        for manager_fn_name, rpc_name in self.method_names.items():
+            if rpc_name and not getattr(service_cls, rpc_name, None):
                 manager_fn = make_manager_fn(manager_fn_name)
                 setattr(service_cls, rpc_name, manager_fn)
                 rpc(manager_fn)

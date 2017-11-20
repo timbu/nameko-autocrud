@@ -1,4 +1,6 @@
 import pytest
+
+from nameko.exceptions import ExtensionNotFound
 from nameko.rpc import rpc
 from nameko.testing.services import entrypoint_hook
 from nameko_sqlalchemy import DatabaseSession
@@ -25,11 +27,24 @@ def service2(create_service, dec_base, example_model):
         name = "exampleservice"
 
         session = DatabaseSession(dec_base)
-        example_crud = AutoCrud('session', model_cls=example_model)
+        example_crud = AutoCrud(
+            'session', model_cls=example_model,
+            list_method_name='_list_examplemodels',
+            delete_method_name=None
+        )
 
         @rpc
         def get_examplemodel(self, id_):
-            return 'hello'
+            """ Method should not be overwritten """
+            return "hello"
+
+        @rpc
+        def list_examplemodels(self, *args, **kwargs):
+            """ Enhancing default method behaviour """
+            results = self._list_examplemodels(*args, **kwargs)
+            for result in results:
+                result['more'] = 'data'
+            return results
 
     return create_service(ExampleService)
 
@@ -156,3 +171,51 @@ def test_wont_overwrite_service_methods(service2):
     ) as get_examplemodel:
         result = get_examplemodel(1)
         assert result == 'hello'
+
+
+def test_enhanced_list_method(service2):
+    """ service2 implements an enhanced list_examplemodels method using a
+        custom "list" method name.
+    """
+    container = service2.container
+
+    record_1 = {'id': 1, 'name': 'Bob Dobalina'}
+
+    # write through the service
+    with entrypoint_hook(
+        container, "create_examplemodel"
+    ) as create_examplemodel:
+
+        result = create_examplemodel(record_1)
+        assert result == record_1
+
+    # call the list method
+    with entrypoint_hook(
+        container, "list_examplemodels"
+    ) as list_examplemodels:
+        results = list_examplemodels()
+        assert results[0]['id'] == 1
+        assert results[0]['name'] == 'Bob Dobalina'
+        assert results[0]['more'] == 'data'
+
+
+def test_delete_method_not_implemented(service2):
+    """ service2 switches off delete_examplemodel
+    """
+    container = service2.container
+
+    record_1 = {'id': 1, 'name': 'Bob Dobalina'}
+
+    # write through the service
+    with entrypoint_hook(
+        container, "create_examplemodel"
+    ) as create_examplemodel:
+
+        result = create_examplemodel(record_1)
+        assert result == record_1
+
+    with pytest.raises(ExtensionNotFound):
+        with entrypoint_hook(
+            container, "delete_examplemodel"
+        ) as delete_examplemodel:
+            delete_examplemodel(1)
