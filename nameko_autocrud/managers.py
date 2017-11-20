@@ -9,7 +9,7 @@ class CrudManager(object):
     def __init__(
         self, provider, service, db_storage=None,
         to_serializable=None,
-        from_serializable=None, **kwargs
+        from_serializable=None,
     ):
         self.db_storage = db_storage
         self.to_serializable = to_serializable
@@ -26,6 +26,11 @@ class CrudManager(object):
         return [self.to_serializable(result) for result in results]
 
     def page(self, page_size, page_num, filters=None, order_by=None):
+        if page_size < 1:
+            raise ValueError('Invalid page_size ({})'.format(page_size))
+        if page_num < 1:
+            raise ValueError('Invalid page_num ({})'.format(page_num))
+
         offset = page_size * (page_num - 1)
         limit = page_size
         total = self.count(filters=filters)
