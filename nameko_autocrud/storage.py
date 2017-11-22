@@ -1,3 +1,4 @@
+from sqlalchemy import func, inspect
 from sqlalchemy_filters import apply_filters, apply_sort
 
 
@@ -40,11 +41,16 @@ class DBStorage(object):
         return query.all()
 
     def count(self, filters=None):
-        query = self.query
+        # Prefer func.count rather than query.count() for speed
+        # .count is inefficient for wide tables, but it could be we make use
+        # of another mechanism to stop sqlalchemy querying all fields
+        pk_col_names = tuple(
+            c.name for c in inspect(self.model_cls).primary_key)
+        attr_to_count = getattr(self.model_cls, pk_col_names[0])
+        query = self.session.query(func.count(attr_to_count))
         if filters:
             query = apply_filters(query, filters)
-
-        return query.count()
+        return query.one()[0]
 
     def update(self, pk, data, flush=True, commit=True):
         obj = self._get(pk)
