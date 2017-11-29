@@ -1,22 +1,13 @@
-import os
-from codecs import open
 from setuptools import setup, find_packages
-
-
-here = os.path.abspath(os.path.dirname(__file__))
-
-with open(os.path.join(here, 'README.rst'), 'r', 'utf-8') as handle:
-    readme = handle.read()
 
 setup(
     name='nameko-autocrud',
-    version='0.0.1',
+    version='0.0.2',
     description='Autocrud utility for nameko services',
-    long_description=readme,
     author='Student.com',
     author_email='wearehiring@student.com',
     url='http://github.com/timbu/nameko-autocrud',
-    packages=find_packages('nameko_autocrud', exclude=['test', 'test.*']),
+    packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
         "nameko>=2.6.0",
         "sqlalchemy>=1.0.16",

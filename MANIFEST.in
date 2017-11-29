@@ -1,2 +1,1 @@
 exclude test/*
-include nameko_autocrud/*
