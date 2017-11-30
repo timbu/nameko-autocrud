@@ -25,15 +25,19 @@ def example_model(dec_base):
 
 
 @pytest.fixture
+def multi_pk_model(dec_base):
+    class MultiPkModel(dec_base):
+        __tablename__ = 'multi_pk'
+        id = Column(Integer, primary_key=True)
+        name = Column(String, primary_key=True)
+        value = Column(Integer)
+    return MultiPkModel
+
+
+@pytest.fixture
 def db_uri(tmpdir):
     db_uri = 'sqlite:///{}'.format(tmpdir.join("db").strpath)
     return db_uri
-
-
-# def engine(db_uri):
-#     engine = create_engine(db_uri)
-#     example_model.metadata.create_all(engine)
-#     return engine
 
 
 @pytest.fixture
