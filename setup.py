@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nameko-autocrud',
-    version='0.0.2',
+    version='0.0.3',
     description='Autocrud utility for nameko services',
     author='Student.com',
     author_email='wearehiring@student.com',
