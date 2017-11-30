@@ -1,3 +1,4 @@
+from sqlalchemy import inspect
 from sqlalchemy_filters import apply_filters, apply_sort
 
 
@@ -12,7 +13,18 @@ class DBStorage(object):
         self.session = session
 
     def _get(self, pk):
-        obj = self.query.get(pk)
+        query = self.query
+        # In order to allow the underlying query to be customized with
+        # additional filters, we cannot use `query.get` and must construct
+        # our own additional PK filter.
+        pk_columns = inspect(self.model_cls).primary_key
+        pk_values = pk if isinstance(pk, (list, tuple)) else (pk,)
+
+        for col, val in zip(pk_columns, pk_values):
+            query = query.filter(getattr(self.model_cls, col.name) == val)
+
+        obj = query.one_or_none()
+
         if not obj:
             raise NotFound(
                 '{} with ID {} does not exist'

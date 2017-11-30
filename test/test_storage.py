@@ -16,6 +16,19 @@ def instances(example_model, session):
 
 
 @pytest.fixture
+def multi_pk_instances(multi_pk_model, session):
+    instances_ = [
+        multi_pk_model(id=1, name='foo', value=1),
+        multi_pk_model(id=1, name='bar', value=2),
+        multi_pk_model(id=1, name='baz', value=3),
+        multi_pk_model(id=2, name='foo', value=4),
+    ]
+    session.add_all(instances_)
+    session.commit()
+    return instances_
+
+
+@pytest.fixture
 def storage(example_model, session):
     return DBStorage(example_model, session=session)
 
@@ -43,6 +56,38 @@ class TestStorageGet:
             storage.get(4)
 
         assert 'ExampleModel with ID 4 does not exist' in str(exc)
+
+    def test_get_with_customised_base_query(
+        self, instances, session, example_model
+    ):
+        class CustomStorage(DBStorage):
+            @property
+            def query(self):
+                return super().query.filter(example_model.name == 'baz')
+
+        storage = CustomStorage(example_model, session=session)
+
+        result = storage.get(3)
+        assert result == instances[2]
+
+        with pytest.raises(NotFound):
+            storage.get(1)
+
+    def test_get_with_customised_base_query_and_multiple_primary_keys(
+        self, multi_pk_instances, session, multi_pk_model
+    ):
+        class CustomStorage(DBStorage):
+            @property
+            def query(self):
+                return super().query.filter(self.model_cls.name == 'baz')
+
+        storage = CustomStorage(multi_pk_model, session=session)
+
+        result = storage.get([1, 'baz'])
+        assert result == multi_pk_instances[2]
+
+        with pytest.raises(NotFound):
+            storage.get([1, 'foo'])
 
 
 class TestStorageList:
