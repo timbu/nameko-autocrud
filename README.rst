@@ -22,8 +22,23 @@ Usage
         name = 'my_service'
         session = DatabaseSession(models.Base)
 
-        member_auto_crud = AutoCrud(session, model_cls=models.Member)
-        payment_auto_crud = AutoCrud(session, model_cls=models.Payment)
+        member_auto_crud = AutoCrud(
+            session,
+            model_cls=models.Member,
+            get_method_name='get_member',
+            list_method_name='list_members',
+            page_method_name='page_members',
+            count_method_name='count_members',
+            create_method_name='create_member',
+            update_method_name='update_member',
+            delete_method_name='delete_member',
+        )
+        payment_auto_crud = AutoCrud(
+            session,
+            model_cls=models.Payment,
+            get_method_name='get_payment',
+            list_method_name='list_payments'
+        )
 
         @rpc
         def my_entrypoint(self, value):
@@ -43,11 +58,7 @@ This will automatically make the following additional RPC entrypoints available:
     delete_member(self, id_)
     get_payment(self, id_)
     list_payments(self, filters=None, offset=None, limit=None, order_by=None)
-    page_payments(self, page_size, page_num, filters=None, order_by=None)
-    count_payments(self, filters=None)
-    update_payment(self, id_, data)
-    create_payment(self, data)
-    delete_payment(self, id_)
+
 
 The dependencies themselves can be used to manipulate sqlalchemy objects within other code E.g.
 
@@ -62,26 +73,16 @@ The dependencies themselves can be used to manipulate sqlalchemy objects within 
 Customizing
 ===========
 
-Customizing method names
+Setting method names
 ------------------------
 
-Specifying the ``entity_name`` will customize all generated method names. ``list``, ``page`` and ``count`` methods all use a plural form. If adding "s" is not correct, ``entity_name_plural`` can be specified.
-
-.. code-block:: python
-
-    product_status_crud = AutoCrud(
-        session, model_cls=models.ProductStatus, 
-        entity_name='product_status', 
-        entity_name_plural='product_statuses'
-    )
-
-To customize individual methods-names, you can use the ``*_method_name`` kwargs. Setting this value to `None` will prevent the method from being generated.
+The ``*_method_name`` kwargs are used to declare the name of each crud method. Setting this value to `None` (or not providing the kwarg) will prevent the method from being generated.
 
 .. code-block:: python
 
     cake_crud = AutoCrud(
-        session, model_cls=models.Cake, 
-        delete_method_name='eat_cake', 
+        session, model_cls=models.Cake,
+        delete_method_name='eat_cake',
         update_method_name=None,
     )
 
@@ -105,9 +106,15 @@ Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider
 
         name = 'my_service'
         session = DatabaseSession(models.Base)
-        dispatcher = EventDispatcher()        
-        
-        payment_auto_crud = AutoCrudWithEvents(session, dispatcher, model_cls=models.Payment)
+        dispatcher = EventDispatcher()
+
+        payment_auto_crud = AutoCrudWithEvents(
+            session, dispatcher, 'payment',
+            model_cls=models.Payment,
+            create_method_name='create_payment',
+            update_method_name='update_payment',
+            delete_method_name='delete_payment',
+        )
 
 TODO - event formats - customizing event names
 Specifying event serializer

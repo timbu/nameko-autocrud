@@ -72,27 +72,27 @@ class CrudManagerWithEvents(CrudManager):
 
     def __init__(
         self, provider, service,
-        event_names=None, dispatcher_accessor=None,
+        event_entity_name=None, event_names=None, dispatcher_accessor=None,
         to_event_serializable=None, **kwargs
     ):
         super(CrudManagerWithEvents, self).__init__(
             provider, service, **kwargs)
 
-        self.entity_name = provider.entity_name
+        self.event_entity_name = event_entity_name
         self.dispatcher = dispatcher_accessor(service)
         self.to_event_serializable = (
             to_event_serializable or self.to_serializable
         )
 
         self.event_names = event_names or {
-            'create': '{}_created'.format(provider.entity_name),
-            'update': '{}_updated'.format(provider.entity_name),
-            'delete': '{}_deleted'.format(provider.entity_name),
+            'create': '{}_created'.format(event_entity_name),
+            'update': '{}_updated'.format(event_entity_name),
+            'delete': '{}_deleted'.format(event_entity_name),
         }
 
     def _dispatch_event(self, event_name, object_data, payload=None):
         payload = payload or {}
-        payload.update({self.entity_name: object_data})
+        payload.update({self.event_entity_name: object_data})
         self.dispatcher(event_name, payload)
         logger.info('dispatched event: %s', event_name)
 
