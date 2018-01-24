@@ -94,7 +94,7 @@ TODO - marshmallow examples
 
 Events
 ======
-Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider. This has the same behaviour as ``AutoCrud`` but will dispatch nameko events for ``create``, ``update`` & ``delete`` actions.
+Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider. This has the same behaviour as ``AutoCrud`` but can dispatch nameko events for ``create``, ``update`` & ``delete`` actions.
 
 .. code-block:: python
 
@@ -111,6 +111,9 @@ Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider
         payment_auto_crud = AutoCrudWithEvents(
             session, dispatcher, 'payment',
             model_cls=models.Payment,
+            create_event_name='payment_created',
+            update_event_name='payment_updated',
+            delete_event_name='payment_deleted',
             create_method_name='create_payment',
             update_method_name='update_payment',
             delete_method_name='delete_payment',

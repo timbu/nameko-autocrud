@@ -113,6 +113,9 @@ class AutoCrudWithEvents(AutoCrud):
         session_provider,
         dispatcher_provider,
         event_entity_name,
+        create_event_name=None,
+        update_event_name=None,
+        delete_event_name=None,
         manager_cls=CrudManagerWithEvents,
         **kwargs
     ):
@@ -122,5 +125,8 @@ class AutoCrudWithEvents(AutoCrud):
             manager_cls=manager_cls,
             dispatcher_accessor=dispatcher_accessor,
             event_entity_name=event_entity_name,
+            create_event_name=create_event_name,
+            update_event_name=update_event_name,
+            delete_event_name=delete_event_name,
             **kwargs
         )
