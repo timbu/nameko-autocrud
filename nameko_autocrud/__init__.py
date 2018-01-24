@@ -37,6 +37,18 @@ class AutoCrud(DependencyProvider):
         delete_method_name=None,
         **crud_manager_kwargs
     ):
+        required = [
+            (session_provider, 'session_provider'),
+            (manager_cls, 'manager_cls'),
+            (db_storage_cls, 'db_storage_cls'),
+            (model_cls, 'model_cls'),
+        ]
+        missing = [name for param, name in required if not param]
+        if missing:
+            raise ValueError(
+                '`{}` param(s) are missing for {}'.format(
+                    missing, type(self).__name__))
+
         # store these providers as a map so they are not seen by nameko
         # as sub-dependencies
         self.session_accessor = get_dependency_accessor(session_provider)
@@ -119,6 +131,16 @@ class AutoCrudWithEvents(AutoCrud):
         manager_cls=CrudManagerWithEvents,
         **kwargs
     ):
+        required = [
+            (dispatcher_provider, 'dispatcher_provider'),
+            (event_entity_name, 'event_entity_name'),
+        ]
+        missing = [name for param, name in required if not param]
+        if missing:
+            raise ValueError(
+                '`{}` param(s) are missing for {}'.format(
+                    missing, type(self).__name__))
+
         dispatcher_accessor = get_dependency_accessor(dispatcher_provider)
         super(AutoCrudWithEvents, self).__init__(
             session_provider,
