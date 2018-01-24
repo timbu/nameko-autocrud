@@ -74,7 +74,7 @@ class TestRequiredParams:
         dispatcher_provider = None if missing == 'dispatcher_provider' else 'D'
         event_entity_name = None if missing == 'event_entity_name' else 'exmpl'
 
-        with pytest.raises(TypeError) as exc:
+        with pytest.raises(ValueError) as exc:
             AutoCrudWithEvents(
                 session_provider,
                 dispatcher_provider,
