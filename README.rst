@@ -123,7 +123,7 @@ Nameko events will be generated for every ``*_even_name`` parameter given. If th
 
 Create events
 -------------
-Create events will be dispatched as the name given by ``create_event_name`` and the payload will be of the form:
+Create events will be dispatched after a successful creation. The event-name is given by ``create_event_name`` and the payload will be of the form:
 
 .. code-block:: python
 
@@ -135,7 +135,7 @@ Where the ``payment`` key is given by the required ``event_entity_name`` paramet
 
 Update events
 -------------
-Update events will be dispatched as the name given by ``update_event_name`` only if the update resulted in changes. The payload will be of the form:
+Update events will be dispatched after a successful update that resulted in changes. The event-name is given by ``update_event_name`` and the payload will be of the form:
 
 .. code-block:: python
 
@@ -147,5 +147,16 @@ Update events will be dispatched as the name given by ``update_event_name`` only
 
 Where the ``payment`` key is given by the required ``event_entity_name`` parameter.
 
+Delete events
+-------------
+Delete events will be dispatched after a successful deletion. The event-name is given by ``delete_event_name`` and the payload will be of the form:
+
+.. code-block:: python
+
+    {
+        'payment': {<serialized payment instance before deletion>}
+    }
+
+Where the ``payment`` key is given by the required ``event_entity_name`` parameter.
 
 TODO - Specifying event serializer
