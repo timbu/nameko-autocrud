@@ -1,11 +1,11 @@
 nameko-autocrud
 =================
 
--  An experimental (slightly magical) dependency to automatically add CRUD RPC (and possibly later HTTP) entrypoints to nameko microservices.
--  Based on Sqlalchemy models.
+-  A (slightly magical) dependency to automatically add CRUD RPC (and possibly later HTTP) entrypoints to `nameko <https://github.com/nameko/nameko/>`_ microservices.
+-  Based on `Sqlalchemy <http://www.sqlalchemy.org/>`_ models.
 -  Aim is to reduce the amount of code required to implement common methods.
--  Uses sqlalchemy-filters.
--  Works in conjunction with sqlalchemy dependency providers such as nameko-sqlalchemy.
+-  Uses `sqlalchemy-filters <https://github.com/Overseas-Student-Living/sqlalchemy-filters>`_.
+-  Works in conjunction with sqlalchemy dependency providers such as `nameko-sqlalchemy <https://github.com/onefinestay/nameko-sqlalchemy>`_.
 -  Each dependency also can be used in other methods to get/manipulate model instances.
 -  Customisable components.
 
@@ -119,5 +119,33 @@ Nameko-autocrud includes an additional ``AutoCrudWithEvents`` DependencyProvider
             delete_method_name='delete_payment',
         )
 
-TODO - event formats - customizing event names
-Specifying event serializer
+Nameko events will be generated for every ``*_even_name`` parameter given. If the parameter is set to ``None`` or not present, the event will not be dispatched. 
+
+Create events
+-------------
+Create events will be dispatched as the name given by ``create_event_name`` and the payload will be of the form:
+
+.. code-block:: python
+
+    {
+        'payment': {<serialized payment instance after creation>}
+    }
+
+Where the ``payment`` key is given by the required ``event_entity_name`` parameter.
+
+Update events
+-------------
+Update events will be dispatched as the name given by ``update_event_name`` only if the update resulted in changes. The payload will be of the form:
+
+.. code-block:: python
+
+    {
+      'payment': {<serialized payment instance after the update>},
+      'changed': [<list of the changed fields>],
+      'before': {<serialized payment instance before the update>},
+    }
+
+Where the ``payment`` key is given by the required ``event_entity_name`` parameter.
+
+
+TODO - Specifying event serializer
