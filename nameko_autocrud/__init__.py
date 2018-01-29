@@ -6,6 +6,7 @@ from nameko.extensions import DependencyProvider
 from .managers import CrudManager, CrudManagerWithEvents
 from .serializers import default_to_serializable, get_default_from_serializable
 from .storage import DBStorage
+from .storage import NotFound  # noqa
 
 logger = logging.getLogger(__name__)
 
