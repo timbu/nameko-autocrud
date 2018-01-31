@@ -15,7 +15,17 @@ def service(create_service, dec_base, example_model):
         name = "exampleservice"
 
         session = DatabaseSession(dec_base)
-        example_crud = AutoCrud('session', model_cls=example_model)
+        example_crud = AutoCrud(
+            'session',
+            model_cls=example_model,
+            get_method_name='get_example_model',
+            list_method_name='list_example_models',
+            page_method_name='page_example_models',
+            count_method_name='count_example_models',
+            create_method_name='create_example_model',
+            update_method_name='update_example_model',
+            delete_method_name='delete_example_model',
+        )
 
     return create_service(ExampleService)
 
@@ -29,19 +39,21 @@ def service2(create_service, dec_base, example_model):
         session = DatabaseSession(dec_base)
         example_crud = AutoCrud(
             'session', model_cls=example_model,
-            list_method_name='_list_examplemodels',
+            get_method_name='get_example_model',
+            list_method_name='_list_example_models',
+            create_method_name='create_example_model',
             delete_method_name=None
         )
 
         @rpc
-        def get_examplemodel(self, id_):
+        def get_example_model(self, id_):
             """ Method should not be overwritten """
             return "hello"
 
         @rpc
-        def list_examplemodels(self, *args, **kwargs):
+        def list_example_models(self, *args, **kwargs):
             """ Enhancing default method behaviour """
-            results = self._list_examplemodels(*args, **kwargs)
+            results = self._list_example_models(*args, **kwargs)
             for result in results:
                 result['more'] = 'data'
             return results
@@ -58,29 +70,29 @@ def test_end_to_end(service):
 
     # write through the service
     with entrypoint_hook(
-        container, "create_examplemodel"
-    ) as create_examplemodel:
+        container, "create_example_model"
+    ) as create_example_model:
 
-        result = create_examplemodel(record_1)
+        result = create_example_model(record_1)
         assert result == record_1
 
-        result = create_examplemodel(record_2)
+        result = create_example_model(record_2)
         assert result == record_2
 
     # count through the service
     with entrypoint_hook(
-        container, "count_examplemodels"
-    ) as count_examplemodels:
+        container, "count_example_models"
+    ) as count_example_models:
 
-        result = count_examplemodels()
+        result = count_example_models()
         assert result == 2
 
     # list through the service
     with entrypoint_hook(
-        container, "list_examplemodels"
-    ) as list_examplemodels:
+        container, "list_example_models"
+    ) as list_example_models:
 
-        result = list_examplemodels()
+        result = list_example_models()
         assert result == [
             record_1,
             record_2
@@ -88,10 +100,10 @@ def test_end_to_end(service):
 
     # page through the service
     with entrypoint_hook(
-        container, "page_examplemodels"
-    ) as page_examplemodels:
+        container, "page_example_models"
+    ) as page_example_models:
 
-        result = page_examplemodels(1, 1)
+        result = page_example_models(1, 1)
         assert result == {
             'results': [record_1],
             'page_num': 1,
@@ -99,7 +111,7 @@ def test_end_to_end(service):
             'num_results': 2,
         }
 
-        result = page_examplemodels(1, 2)
+        result = page_example_models(1, 2)
         assert result == {
             'results': [record_2],
             'page_num': 2,
@@ -107,7 +119,7 @@ def test_end_to_end(service):
             'num_results': 2,
         }
 
-        result = page_examplemodels(1, 3)
+        result = page_example_models(1, 3)
         assert result == {
             'results': [],
             'page_num': 3,
@@ -117,40 +129,40 @@ def test_end_to_end(service):
 
     # update id 2
     with entrypoint_hook(
-        container, "update_examplemodel"
-    ) as update_examplemodel:
+        container, "update_example_model"
+    ) as update_example_model:
 
-        result = update_examplemodel(2, {'name': 'Ned Ryerson'})
+        result = update_example_model(2, {'name': 'Ned Ryerson'})
         assert result == updated_record_2
 
     # get through the service
     with entrypoint_hook(
-        container, "get_examplemodel"
-    ) as get_examplemodel:
+        container, "get_example_model"
+    ) as get_example_model:
 
-        result = get_examplemodel(1)
+        result = get_example_model(1)
         assert result == record_1
-        result = get_examplemodel(2)
+        result = get_example_model(2)
         assert result == updated_record_2
 
     # delete
     with entrypoint_hook(
-        container, "delete_examplemodel"
-    ) as delete_examplemodel:
+        container, "delete_example_model"
+    ) as delete_example_model:
 
-        result = delete_examplemodel(1)
+        result = delete_example_model(1)
 
     # confirm deletion
     with entrypoint_hook(
-        container, "list_examplemodels"
-    ) as list_examplemodels:
+        container, "list_example_models"
+    ) as list_example_models:
 
-        result = list_examplemodels()
+        result = list_example_models()
         assert result == [updated_record_2]
 
 
 def test_wont_overwrite_service_methods(service2):
-    """ service2 already implements a get_examplemodel method.
+    """ service2 already implements a get_example_model method.
         Check it is not replaced with the autocrud version.
     """
     container = service2.container
@@ -159,22 +171,22 @@ def test_wont_overwrite_service_methods(service2):
 
     # write through the service
     with entrypoint_hook(
-        container, "create_examplemodel"
-    ) as create_examplemodel:
+        container, "create_example_model"
+    ) as create_example_model:
 
-        result = create_examplemodel(record_1)
+        result = create_example_model(record_1)
         assert result == record_1
 
     # call the get method
     with entrypoint_hook(
-        container, "get_examplemodel"
-    ) as get_examplemodel:
-        result = get_examplemodel(1)
+        container, "get_example_model"
+    ) as get_example_model:
+        result = get_example_model(1)
         assert result == 'hello'
 
 
 def test_enhanced_list_method(service2):
-    """ service2 implements an enhanced list_examplemodels method using a
+    """ service2 implements an enhanced list_example_models method using a
         custom "list" method name.
     """
     container = service2.container
@@ -183,24 +195,24 @@ def test_enhanced_list_method(service2):
 
     # write through the service
     with entrypoint_hook(
-        container, "create_examplemodel"
-    ) as create_examplemodel:
+        container, "create_example_model"
+    ) as create_example_model:
 
-        result = create_examplemodel(record_1)
+        result = create_example_model(record_1)
         assert result == record_1
 
     # call the list method
     with entrypoint_hook(
-        container, "list_examplemodels"
-    ) as list_examplemodels:
-        results = list_examplemodels()
+        container, "list_example_models"
+    ) as list_example_models:
+        results = list_example_models()
         assert results[0]['id'] == 1
         assert results[0]['name'] == 'Bob Dobalina'
         assert results[0]['more'] == 'data'
 
 
 def test_delete_method_not_implemented(service2):
-    """ service2 switches off delete_examplemodel
+    """ service2 switches off delete_example_model
     """
     container = service2.container
 
@@ -208,14 +220,14 @@ def test_delete_method_not_implemented(service2):
 
     # write through the service
     with entrypoint_hook(
-        container, "create_examplemodel"
-    ) as create_examplemodel:
+        container, "create_example_model"
+    ) as create_example_model:
 
-        result = create_examplemodel(record_1)
+        result = create_example_model(record_1)
         assert result == record_1
 
     with pytest.raises(ExtensionNotFound):
         with entrypoint_hook(
-            container, "delete_examplemodel"
-        ) as delete_examplemodel:
-            delete_examplemodel(1)
+            container, "delete_example_model"
+        ) as delete_example_model:
+            delete_example_model(1)
