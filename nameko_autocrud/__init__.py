@@ -1,6 +1,6 @@
 import logging
 
-from nameko.rpc import rpc
+from nameko.rpc import rpc as nameko_rpc
 from nameko.extensions import DependencyProvider
 
 from .managers import CrudManager, CrudManagerWithEvents
@@ -36,6 +36,7 @@ class AutoCrud(DependencyProvider):
         page_method_name=None, count_method_name=None,
         create_method_name=None, update_method_name=None,
         delete_method_name=None,
+        rpc=nameko_rpc,
         **crud_manager_kwargs
     ):
         required = [
@@ -57,6 +58,7 @@ class AutoCrud(DependencyProvider):
         self.manager_cls = manager_cls
         self.db_storage_cls = db_storage_cls
         self.crud_manager_kwargs = crud_manager_kwargs
+        self.rpc = rpc
 
         self.method_names = {
             'get': get_method_name,
@@ -101,7 +103,7 @@ class AutoCrud(DependencyProvider):
             if rpc_name and not getattr(service_cls, rpc_name, None):
                 manager_fn = make_manager_fn(manager_fn_name)
                 setattr(service_cls, rpc_name, manager_fn)
-                rpc(manager_fn)
+                self.rpc(manager_fn)
 
         return bound
 
