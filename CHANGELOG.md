@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.1.1
+
+* Bump python-dateutil dependency.
+
+
 Version 0.1.0
 -------------
 
