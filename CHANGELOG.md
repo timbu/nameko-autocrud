@@ -1,7 +1,14 @@
 Release Notes
 =============
 
+Version 0.1.2
+-------------
+
+* Fix sqlalchemy_utils dependency.
+
+
 Version 0.1.1
+-------------
 
 * Bump python-dateutil dependency.
 

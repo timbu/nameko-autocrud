@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='nameko-autocrud',
-    version='0.1.1',
+    version='0.1.2',
     description='Autocrud utility for nameko services',
     author='Student.com',
     author_email='wearehiring@student.com',
@@ -13,6 +13,7 @@ setup(
         "sqlalchemy>=1.0.16",
         "sqlalchemy_filters>=0.4.0",
         "python-dateutil>=2.6.1",
+        "sqlalchemy-utils>=0.32.5",
     ],
     extras_require={
         'dev': [
@@ -21,7 +22,6 @@ setup(
             "pylint==1.5.5",
             "pytest==3.0.5",
             "nameko_sqlalchemy>=0.1.0",
-            "sqlalchemy-utils==0.32.5",
         ]
     },
     zip_safe=True,
