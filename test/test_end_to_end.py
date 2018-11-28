@@ -231,3 +231,54 @@ def test_delete_method_not_implemented(service2):
             container, "delete_example_model"
         ) as delete_example_model:
             delete_example_model(1)
+
+
+def test_rpc_parameters(
+    create_service, dec_base, example_model
+):
+    rpc_setups = set()
+
+    def mock_rpc(name):
+        def _mock_rpc(*args, **kwargs):
+            rpc_setups.add(name)
+            rpc(*args, **kwargs)
+        return _mock_rpc
+
+    class ExampleService(object):
+        name = "exampleservice"
+
+        session = DatabaseSession(dec_base)
+        example_crud = AutoCrud(
+            'session',
+            model_cls=example_model,
+            get_method_name='get_example_model',
+            list_method_name='list_example_models',
+            page_method_name='page_example_models',
+            count_method_name='count_example_models',
+            create_method_name='create_example_model',
+            update_method_name='update_example_model',
+            delete_method_name='delete_example_model',
+            get_rpc=mock_rpc('get'),
+            list_rpc=mock_rpc('list'),
+            page_rpc=mock_rpc('page'),
+            count_rpc=mock_rpc('count'),
+            create_rpc=mock_rpc('create'),
+            update_rpc=mock_rpc('update'),
+            delete_rpc=mock_rpc('delete'),
+        )
+
+    service = create_service(ExampleService)
+
+    record_1 = {'id': 1, 'name': 'Bob Dobalina'}
+
+    # demonstrate service still works
+    with entrypoint_hook(
+        service.container, "create_example_model"
+    ) as create_example_model:
+
+        result = create_example_model(record_1)
+        assert result == record_1
+
+    assert rpc_setups == {
+        'get', 'list', 'page', 'count', 'create', 'update', 'delete'
+    }

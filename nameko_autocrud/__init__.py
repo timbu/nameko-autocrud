@@ -36,6 +36,10 @@ class AutoCrud(DependencyProvider):
         page_method_name=None, count_method_name=None,
         create_method_name=None, update_method_name=None,
         delete_method_name=None,
+        get_rpc=None, list_rpc=None,
+        page_rpc=None, count_rpc=None,
+        create_rpc=None, update_rpc=None,
+        delete_rpc=None,
         rpc=nameko_rpc,
         **crud_manager_kwargs
     ):
@@ -60,14 +64,14 @@ class AutoCrud(DependencyProvider):
         self.crud_manager_kwargs = crud_manager_kwargs
         self.rpc = rpc
 
-        self.method_names = {
-            'get': get_method_name,
-            'list': list_method_name,
-            'page': page_method_name,
-            'count': count_method_name,
-            'create': create_method_name,
-            'update': update_method_name,
-            'delete': delete_method_name,
+        self.method_config = {
+            'get': (get_method_name, get_rpc),
+            'list': (list_method_name, list_rpc),
+            'page': (page_method_name, page_rpc),
+            'count': (count_method_name, count_rpc),
+            'create': (create_method_name, create_rpc),
+            'update': (update_method_name, update_rpc),
+            'delete': (delete_method_name, delete_rpc),
         }
 
         self.from_serializable = (
@@ -99,11 +103,13 @@ class AutoCrud(DependencyProvider):
                 return getattr(manager, fn_name)(*args, **kwargs)
             return _fn
 
-        for manager_fn_name, rpc_name in self.method_names.items():
+        for mngr_fn_name, (rpc_name, method_rpc) in self.method_config.items():
             if rpc_name and not getattr(service_cls, rpc_name, None):
-                manager_fn = make_manager_fn(manager_fn_name)
+                manager_fn = make_manager_fn(mngr_fn_name)
                 setattr(service_cls, rpc_name, manager_fn)
-                self.rpc(manager_fn)
+                # apply rpc decorator
+                rpc = method_rpc or self.rpc
+                rpc(manager_fn)
 
         return bound
 

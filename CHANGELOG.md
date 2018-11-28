@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.2.0
+-------------
+
+* Support method-level rpc decorator overrides.
+
+
 Version 0.1.2
 -------------
 

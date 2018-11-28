@@ -1,9 +1,9 @@
 nameko-autocrud
 =================
 
--  A (slightly magical) dependency to automatically add CRUD RPC (and possibly later HTTP) entrypoints to `nameko <https://github.com/nameko/nameko/>`_ microservices.
+-  A (slightly magical) dependency to automatically add CRUD RPC entrypoints to `nameko <https://github.com/nameko/nameko/>`_ microservices.
 -  Based on `Sqlalchemy <http://www.sqlalchemy.org/>`_ models.
--  Aim is to reduce the amount of code required to implement common methods.
+-  The aim is to reduce the amount of code required to implement common methods.
 -  Uses `sqlalchemy-filters <https://github.com/Overseas-Student-Living/sqlalchemy-filters>`_.
 -  Works in conjunction with sqlalchemy dependency providers such as `nameko-sqlalchemy <https://github.com/onefinestay/nameko-sqlalchemy>`_.
 -  Each dependency also can be used in other methods to get/manipulate model instances.
@@ -90,6 +90,33 @@ Customizing serialization
 -------------------------
 
 TODO - marshmallow examples
+
+
+RPC Decorator Overrides
+-----------------------
+By default each generated service rpc method is decorated with the standard ``nameko.rpc.rpc`` decorator.
+This can be overridden for all methods by supplying the ``rpc`` kwarg to ``AutoCrud``. For example, if the service is making use of `nameko-amqp-retry <https://github.com/nameko/nameko-amqp-retry>`_, then ``AutoCrud`` should be instantiated with ``rpc=nameko_amqp_retry.rpc``.
+
+The rpc decorator can be overridden for specific methods by supplying  kwargs like ``get_rpc``, ``list_rpc`` etc.
+This makes it possible to declare the ``expected_exceptions`` or ``sensitive_variables`` that may be required for a particular method. E.g.
+
+.. code-block:: python
+
+    from nameko.rpc import rpc
+    from nameko_sqlalchemy import DatabaseSession
+    from nameko_autocrud import AutoCrud, NotFound
+
+    class MyService:
+
+        name = 'my_service'
+        session = DatabaseSession(models.Base)
+
+        cake_crud = AutoCrud(
+            session, model_cls=models.Cake,
+            get_method_name="get_cake",
+            list_method_name="list_cakes",        
+            get_rpc=rpc(expected_exceptions=NotFound),
+        )
 
 
 Events
