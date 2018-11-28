@@ -102,7 +102,6 @@ This makes it possible to declare the ``expected_exceptions`` or ``sensitive_var
 
 .. code-block:: python
 
-    from functools import partial
     from nameko.rpc import rpc
     from nameko_sqlalchemy import DatabaseSession
     from nameko_autocrud import AutoCrud, NotFound
@@ -116,7 +115,7 @@ This makes it possible to declare the ``expected_exceptions`` or ``sensitive_var
             session, model_cls=models.Cake,
             get_method_name="get_cake",
             list_method_name="list_cakes",        
-            get_rpc=partial(rpc, expected_exceptions=NotFound),
+            get_rpc=rpc(expected_exceptions=NotFound),
         )
 
 
