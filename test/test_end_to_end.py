@@ -1,5 +1,4 @@
 import pytest
-from mock import Mock
 
 from nameko.exceptions import ExtensionNotFound
 from nameko.rpc import rpc
@@ -7,7 +6,6 @@ from nameko.testing.services import entrypoint_hook
 from nameko_sqlalchemy import DatabaseSession
 
 from nameko_autocrud import AutoCrud
-from nameko_autocrud.storage import NotFound
 
 
 @pytest.fixture
@@ -281,4 +279,6 @@ def test_rpc_parameters(
         result = create_example_model(record_1)
         assert result == record_1
 
-    assert rpc_setups == {'get', 'list', 'page', 'count', 'create', 'update', 'delete'}
+    assert rpc_setups == {
+        'get', 'list', 'page', 'count', 'create', 'update', 'delete'
+    }
