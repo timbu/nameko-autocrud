@@ -9,6 +9,16 @@ nameko-autocrud
 -  Each dependency also can be used in other methods to get/manipulate model instances.
 -  Customisable components.
 
+Installation
+------------
+
+Install from `PyPI`_::
+
+    pip install nameko-autocrud
+
+.. _PyPI: https://pypi.python.org/pypi/nameko-autocrud
+
+
 Usage
 -----
 
