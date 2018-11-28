@@ -95,7 +95,7 @@ TODO - marshmallow examples
 RPC Decorator Overrides
 -----------------------
 By default each generated service rpc method is decorated with the standard ``nameko.rpc.rpc`` decorator.
-This can be overridden for all methods, by supplying the ``rpc`` kwarg to ``AutoCrud``. For example, if the service is making use of `nameko-amqp-retry <https://github.com/nameko/nameko-amqp-retry>`_, then ``AutoCrud`` should be instantiated with ``rpc=nameko_amqp_retry.rpc``.
+This can be overridden for all methods by supplying the ``rpc`` kwarg to ``AutoCrud``. For example, if the service is making use of `nameko-amqp-retry <https://github.com/nameko/nameko-amqp-retry>`_, then ``AutoCrud`` should be instantiated with ``rpc=nameko_amqp_retry.rpc``.
 
 The rpc decorator can be overridden for specific methods by supplying  kwargs like ``get_rpc``, ``list_rpc`` etc.
 This makes it possible to declare the ``expected_exceptions`` or ``sensitive_variables`` that may be required for a particular method. E.g.
