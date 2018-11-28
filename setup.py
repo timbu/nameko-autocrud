@@ -2,10 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='nameko-autocrud',
-    version='0.1.2',
+    version='0.2.0',
     description='Autocrud utility for nameko services',
-    author='Student.com',
-    author_email='wearehiring@student.com',
+    author='timbu',
     url='http://github.com/timbu/nameko-autocrud',
     packages=find_packages(exclude=['test', 'test.*']),
     install_requires=[
